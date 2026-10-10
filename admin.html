@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alora Bank — Admin Console</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">A</div>
+    <div class="brand-name">Alora <span>Bank</span> · Admin</div>
+  </div>
+  <div class="user-chip">
+    <span><strong>Administrator</strong></span>
+    <button class="link-btn" id="btn-logout">Sign out</button>
+  </div>
+</div>
+<div class="container">
+  <div class="hero">
+    <div class="label">Total deposits under management</div>
+    <div class="value" id="admin-total"><small>$</small>0.00</div>
+    <div class="plan" id="admin-count"></div>
+  </div>
+  <div class="panel">
+    <h3>Accounts <span class="sub" id="admin-sub"></span></h3>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Account holder</th>
+            <th>Email</th>
+            <th>Account</th>
+            <th>Number</th>
+            <th>Balance (USD)</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="admin-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>
+(function () {
+  var email = Alora.getSession();
+  var db = Alora.loadDb();
+  var me = email && db.users[email];
+  if (!me || !me.isAdmin) { window.location.href = 'login.html'; return; }
+
+  function render() {
+    db = Alora.loadDb();
+    var emails = Object.keys(db.users).filter(function (e) { return !db.users[e].isAdmin; });
+    var total = 0, rows = 0;
+    var tb = document.getElementById('admin-tbody');
+    tb.innerHTML = '';
+    emails.forEach(function (e) {
+      var u = db.users[e];
+      (u.accounts || []).forEach(function (a, i) {
+        total += a.balance;
+        rows++;
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + escapeHtml(u.fullName) + '</td>' +
+          '<td>' + escapeHtml(u.email) + '</td>' +
+          '<td>' + escapeHtml(a.type) + '</td>' +
+          '<td>•••• ' + a.number.slice(-4) + '</td>' +
+          '<td><input type="number" min="0" step="0.01" data-email="' + escapeHtml(e) + '" data-idx="' + i + '" value="' + a.balance.toFixed(2) + '"></td>' +
+          '<td><span class="status-pill status-active">Active</span></td>' +
+          '<td><button class="btn btn-sm" data-save="' + escapeHtml(e) + '|' + i + '">Save</button></td>';
+        tb.appendChild(tr);
+      });
+    });
+    document.getElementById('admin-total').innerHTML = '<small>$</small>' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('admin-count').innerHTML = '<b>' + emails.length + '</b> customers · <b>' + rows + '</b> accounts';
+    document.getElementById('admin-sub').textContent = emails.length + ' customers';
+
+    tb.querySelectorAll('button[data-save]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var parts = btn.getAttribute('data-save').split('|');
+        var em = parts[0], idx = Number(parts[1]);
+        var input = tb.querySelector('input[data-email="' + cssEsc(em) + '"][data-idx="' + idx + '"]');
+        var val = Number(input.value);
+        if (isNaN(val) || val < 0) { input.style.borderColor = 'var(--red)'; return; }
+        var d = Alora.loadDb();
+        var u = d.users[em];
+        var oldBal = u.accounts[idx].balance;
+        u.accounts[idx].balance = Math.round(val * 100) / 100;
+        var diff = Math.round((val - oldBal) * 100) / 100;
+        if (diff !== 0) {
+          u.accounts[idx].transactions.push({
+            desc: 'Balance adjustment by administrator',
+            date: Alora.todayStr(), amount: diff, iso: Alora.nowIso()
+          });
+        }
+        Alora.saveDb(d);
+        btn.textContent = 'Saved';
+        setTimeout(function () { render(); }, 600);
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function cssEsc(s) { return s.replace(/"/g, '\\"'); }
+
+  document.getElementById('btn-logout').addEventListener('click', function () {
+    Alora.setSession(null);
+    window.location.href = 'login.html';
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
