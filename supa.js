@@ -5,8 +5,8 @@
  * (The anon key is public by design — it ships in this file. Never put the
  * service_role key in frontend code.)
  */
-var SUPABASE_URL = "PASTE_PROJECT_URL_HERE";
-var SUPABASE_ANON_KEY = "PASTE_ANON_KEY_HERE";
+var SUPABASE_URL = "https://zvubytosshkxpbpvgcsw.supabase.co";
+var SUPABASE_ANON_KEY = "sb_publishable_c1sl1Mw4Y5EMWjkmYSzEow_m5Yowqk0";
 
 window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
