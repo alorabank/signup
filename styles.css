@@ -1,14 +1,15 @@
 :root {
-  --bg: #0b0d10;
-  --panel: #12151a;
-  --panel-2: #171b21;
-  --border: #232830;
-  --text: #f2f3f5;
-  --muted: #9aa3ad;
-  --gold: #c9a24b;
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #f6f7f9;
+  --border: #e4e7ec;
+  --text: #101828;
+  --muted: #667085;
+  --gold: #b8912f;
   --gold-dim: #8a6f33;
-  --green: #3fb97f;
-  --red: #e5484d;
+  --navy: #1a2350;
+  --green: #12805c;
+  --red: #d92d20;
   --radius: 12px;
 }
 
@@ -23,7 +24,7 @@ body {
 }
 
 .hidden { display: none !important; }
-a { color: var(--gold); text-decoration: none; }
+a { color: var(--gold-dim); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* ---------- login ---------- */
@@ -33,7 +34,7 @@ a:hover { text-decoration: underline; }
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: radial-gradient(1200px 600px at 50% -10%, #1a1e26 0%, var(--bg) 60%);
+  background: radial-gradient(1200px 600px at 50% -10%, #f2f4f7 0%, var(--bg) 60%);
 }
 .login-card {
   width: 100%;
@@ -42,15 +43,15 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 36px 32px;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.08);
 }
 .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.brand-mark {
+img.brand-mark {
   width: 40px; height: 40px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--gold), #7a5f28);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; color: #0b0d10; font-size: 20px;
+  object-fit: cover;
+  display: block;
 }
-.brand-name { font-size: 20px; font-weight: 700; letter-spacing: 0.4px; }
+.brand-name { font-size: 20px; font-weight: 700; letter-spacing: 0.4px; color: var(--navy); }
 .brand-name span { color: var(--gold); }
 .login-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
 
@@ -66,12 +67,12 @@ a:hover { text-decoration: underline; }
   font-size: 15px;
   outline: none;
 }
-.field input:focus, .field select:focus { border-color: var(--gold-dim); }
+.field input:focus, .field select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(184, 145, 47, 0.15); }
 
 .btn {
   width: 100%;
-  background: var(--gold);
-  color: #0b0d10;
+  background: var(--navy);
+  color: #ffffff;
   border: none;
   border-radius: 8px;
   padding: 13px;
@@ -80,7 +81,7 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
   margin-top: 6px;
 }
-.btn:hover { filter: brightness(1.08); }
+.btn:hover { filter: brightness(1.15); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-ghost {
   background: transparent;
@@ -88,7 +89,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   font-weight: 500;
 }
-.btn-ghost:hover { color: var(--text); border-color: var(--gold-dim); }
+.btn-ghost:hover { color: var(--text); border-color: var(--gold); }
 .btn-sm { width: auto; padding: 8px 16px; font-size: 13px; margin-top: 0; }
 
 .form-error { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 18px; }
@@ -103,28 +104,29 @@ a:hover { text-decoration: underline; }
   position: sticky; top: 0; z-index: 10;
 }
 .topbar .brand { margin-bottom: 0; }
-.topbar .brand-mark { width: 32px; height: 32px; font-size: 16px; }
+.topbar img.brand-mark { width: 32px; height: 32px; border-radius: 8px; }
 .topbar .brand-name { font-size: 16px; }
 .user-chip { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--muted); }
 .user-chip strong { color: var(--text); font-weight: 600; }
-.link-btn { background: none; border: none; color: var(--gold); cursor: pointer; font-size: 14px; }
+.link-btn { background: none; border: none; color: var(--gold-dim); cursor: pointer; font-size: 14px; }
 .link-btn:hover { text-decoration: underline; }
 
 .container { max-width: 1180px; margin: 0 auto; padding: 28px; }
 .container.narrow { max-width: 720px; }
 
 .hero {
-  background: linear-gradient(135deg, #151a21 0%, #1c1410 100%);
+  background: linear-gradient(135deg, #1a2350 0%, #2a3568 60%, #8a6f33 130%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 28px 32px;
   margin-bottom: 20px;
+  color: #ffffff;
 }
-.hero .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.hero .label { font-size: 12px; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 .hero .value { font-size: 44px; font-weight: 800; letter-spacing: -0.5px; }
-.hero .value small { font-size: 20px; color: var(--muted); font-weight: 500; }
-.hero .plan { margin-top: 8px; font-size: 14px; color: var(--muted); }
-.hero .plan b { color: var(--gold); font-weight: 600; }
+.hero .value small { font-size: 20px; color: rgba(255,255,255,0.75); font-weight: 500; }
+.hero .plan { margin-top: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+.hero .plan b { color: #f5d67b; font-weight: 600; }
 
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
 .card {
@@ -132,6 +134,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
 }
 .card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
 .card .big { font-size: 24px; font-weight: 700; }
@@ -145,6 +148,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 22px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
 }
 .panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
 .panel h3 .sub { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
@@ -170,7 +174,7 @@ a:hover { text-decoration: underline; }
   flex: 1; background: var(--bg); border: 1px solid var(--border);
   border-radius: 8px; color: var(--text); padding: 10px 12px; font-size: 14px; outline: none; min-width: 0;
 }
-.money-box input:focus, .money-box select:focus { border-color: var(--gold-dim); }
+.money-box input:focus, .money-box select:focus { border-color: var(--gold); }
 .money-msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
 .money-msg.ok { color: var(--green); }
 .money-msg.err { color: var(--red); }
@@ -189,12 +193,12 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
   color: var(--text); padding: 7px 10px; font-size: 13px; width: 130px; outline: none;
 }
-.admin-table input:focus { border-color: var(--gold-dim); }
+.admin-table input:focus { border-color: var(--gold); }
 .status-pill {
   display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
 }
-.status-active { background: rgba(63, 185, 127, 0.15); color: var(--green); }
-.status-review { background: rgba(201, 162, 75, 0.15); color: var(--gold); }
+.status-active { background: rgba(18, 128, 92, 0.12); color: var(--green); }
+.status-review { background: rgba(184, 145, 47, 0.15); color: var(--gold-dim); }
 
 /* ---------- form page ---------- */
 .form-card {
@@ -203,6 +207,7 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   border-radius: 16px;
   padding: 32px;
   margin-top: 24px;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.08);
 }
 .form-card h2 { font-size: 20px; margin-bottom: 6px; }
 .form-card .sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }

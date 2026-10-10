@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alora Bank — Admin Console</title>
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="topbar">
   <div class="brand">
-    <div class="brand-mark">A</div>
+    <img class="brand-mark" src="logo.webp" alt="Alora Bank">
     <div class="brand-name">Alora <span>Bank</span> · Admin</div>
   </div>
   <div class="user-chip">
@@ -43,79 +44,76 @@
     </div>
   </div>
 </div>
-<script src="app.js"></script>
+<script src="supa.js"></script>
 <script>
 (function () {
-  var email = Alora.getSession();
-  var db = Alora.loadDb();
-  var me = email && db.users[email];
-  if (!me || !me.isAdmin) { window.location.href = 'login.html'; return; }
+  async function guard() {
+    var s = await supa.auth.getSession();
+    if (!s.data.session) { window.location.href = 'login.html'; return null; }
+    var p = await supa.from('profiles').select('is_admin').eq('id', s.data.session.user.id).single();
+    if (p.error || !p.data || !p.data.is_admin) { window.location.href = 'login.html'; return null; }
+    return true;
+  }
 
-  function render() {
-    db = Alora.loadDb();
-    var emails = Object.keys(db.users).filter(function (e) { return !db.users[e].isAdmin; });
-    var total = 0, rows = 0;
+  async function render() {
+    var profs = await supa.from('profiles').select('id, full_name, email').eq('is_admin', false).order('created_at', { ascending: false });
+    var accts = await supa.from('accounts').select('*').order('opened_at', { ascending: false });
+    var users = profs.data || [];
+    var all = accts.data || [];
+    var byOwner = {};
+    users.forEach(function (u) { byOwner[u.id] = u; });
+
+    var total = 0;
     var tb = document.getElementById('admin-tbody');
     tb.innerHTML = '';
-    emails.forEach(function (e) {
-      var u = db.users[e];
-      (u.accounts || []).forEach(function (a, i) {
-        total += a.balance;
-        rows++;
-        var tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td>' + escapeHtml(u.fullName) + '</td>' +
-          '<td>' + escapeHtml(u.email) + '</td>' +
-          '<td>' + escapeHtml(a.type) + '</td>' +
-          '<td>•••• ' + a.number.slice(-4) + '</td>' +
-          '<td><input type="number" min="0" step="0.01" data-email="' + escapeHtml(e) + '" data-idx="' + i + '" value="' + a.balance.toFixed(2) + '"></td>' +
-          '<td><span class="status-pill status-active">Active</span></td>' +
-          '<td><button class="btn btn-sm" data-save="' + escapeHtml(e) + '|' + i + '">Save</button></td>';
-        tb.appendChild(tr);
-      });
+    all.forEach(function (a) {
+      var u = byOwner[a.owner_id];
+      if (!u) return;
+      total += Number(a.balance);
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + Alora.escapeHtml(u.full_name) + '</td>' +
+        '<td>' + Alora.escapeHtml(u.email) + '</td>' +
+        '<td>' + Alora.escapeHtml(a.type) + '</td>' +
+        '<td>•••• ' + Alora.escapeHtml(a.number.slice(-4)) + '</td>' +
+        '<td><input type="number" min="0" step="0.01" data-id="' + a.id + '" value="' + Number(a.balance).toFixed(2) + '"></td>' +
+        '<td><span class="status-pill status-active">Active</span></td>' +
+        '<td><button class="btn btn-sm" data-save="' + a.id + '">Save</button></td>';
+      tb.appendChild(tr);
     });
     document.getElementById('admin-total').innerHTML = '<small>$</small>' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('admin-count').innerHTML = '<b>' + emails.length + '</b> customers · <b>' + rows + '</b> accounts';
-    document.getElementById('admin-sub').textContent = emails.length + ' customers';
+    document.getElementById('admin-count').innerHTML = '<b>' + users.length + '</b> customers · <b>' + tb.rows.length + '</b> accounts';
+    document.getElementById('admin-sub').textContent = users.length + ' customers';
 
     tb.querySelectorAll('button[data-save]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var parts = btn.getAttribute('data-save').split('|');
-        var em = parts[0], idx = Number(parts[1]);
-        var input = tb.querySelector('input[data-email="' + cssEsc(em) + '"][data-idx="' + idx + '"]');
+      btn.addEventListener('click', async function () {
+        var id = btn.getAttribute('data-save');
+        var input = tb.querySelector('input[data-id="' + id + '"]');
         var val = Number(input.value);
         if (isNaN(val) || val < 0) { input.style.borderColor = 'var(--red)'; return; }
-        var d = Alora.loadDb();
-        var u = d.users[em];
-        var oldBal = u.accounts[idx].balance;
-        u.accounts[idx].balance = Math.round(val * 100) / 100;
-        var diff = Math.round((val - oldBal) * 100) / 100;
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        var cur = all.find(function (x) { return x.id === id; });
+        var diff = Math.round((val - Number(cur.balance)) * 100) / 100;
+        var up = await supa.from('accounts').update({ balance: Math.round(val * 100) / 100 }).eq('id', id);
+        if (up.error) { btn.textContent = 'Error'; btn.disabled = false; return; }
         if (diff !== 0) {
-          u.accounts[idx].transactions.push({
-            desc: 'Balance adjustment by administrator',
-            date: Alora.todayStr(), amount: diff, iso: Alora.nowIso()
+          await supa.from('transactions').insert({
+            account_id: id, description: 'Balance adjustment by administrator', amount: diff
           });
         }
-        Alora.saveDb(d);
         btn.textContent = 'Saved';
-        setTimeout(function () { render(); }, 600);
+        setTimeout(render, 600);
       });
     });
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-  function cssEsc(s) { return s.replace(/"/g, '\\"'); }
-
-  document.getElementById('btn-logout').addEventListener('click', function () {
-    Alora.setSession(null);
+  document.getElementById('btn-logout').addEventListener('click', async function () {
+    await supa.auth.signOut();
     window.location.href = 'login.html';
   });
 
-  render();
+  guard().then(function (ok) { if (ok) render(); });
 })();
 </script>
 </body>

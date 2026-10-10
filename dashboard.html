@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alora Bank — Dashboard</title>
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="topbar">
   <div class="brand">
-    <div class="brand-mark">A</div>
+    <img class="brand-mark" src="logo.webp" alt="Alora Bank">
     <div class="brand-name">Alora <span>Bank</span></div>
   </div>
   <div class="user-chip">
@@ -53,51 +54,68 @@
     </div>
   </div>
 </div>
-<script src="app.js"></script>
+<script src="supa.js"></script>
 <script>
 (function () {
-  var email = Alora.getSession();
-  if (!email) { window.location.href = 'login.html'; return; }
-  var db = Alora.loadDb();
-  var user = db.users[email];
-  if (!user || user.isAdmin) { window.location.href = 'login.html'; return; }
+  var accounts = [];
+  var profile = null;
 
-  document.getElementById('dash-username').textContent = user.fullName.split(' ')[0];
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
 
-  function render() {
-    var total = user.accounts.reduce(function (s, a) { return s + a.balance; }, 0);
+  async function loadAll() {
+    var s = await supa.auth.getSession();
+    if (!s.data.session) { window.location.href = 'login.html'; return; }
+    var uid = s.data.session.user.id;
+
+    var p = await supa.from('profiles').select('full_name, is_admin').eq('id', uid).single();
+    if (p.error || !p.data || p.data.is_admin) { window.location.href = 'login.html'; return; }
+    profile = p.data;
+    document.getElementById('dash-username').textContent = profile.full_name.split(' ')[0];
+
+    var a = await supa.from('accounts').select('*').eq('owner_id', uid).order('opened_at', { ascending: true });
+    accounts = a.data || [];
+
+    var txns = [];
+    if (accounts.length) {
+      var ids = accounts.map(function (x) { return x.id; });
+      var t = await supa.from('transactions').select('*').in('account_id', ids).order('created_at', { ascending: false }).limit(40);
+      txns = t.data || [];
+    }
+    render(txns);
+  }
+
+  function render(txns) {
+    var total = accounts.reduce(function (s, a) { return s + Number(a.balance); }, 0);
     document.getElementById('hero-balance').innerHTML = '<small>$</small>' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('hero-sub').innerHTML = 'Member since <b>' + (user.accounts[0] ? user.accounts[0].openedAt : '—') + '</b>';
+    document.getElementById('hero-sub').innerHTML = accounts.length
+      ? 'Member since <b>' + fmtDate(accounts[0].opened_at) + '</b>'
+      : '—';
 
     var cards = document.getElementById('account-cards');
     cards.innerHTML = '';
-    user.accounts.forEach(function (a) {
+    accounts.forEach(function (a) {
       var d = document.createElement('div');
       d.className = 'card';
-      d.innerHTML = '<div class="label">' + a.type + ' account</div>' +
+      d.innerHTML = '<div class="label">' + Alora.escapeHtml(a.type) + ' account</div>' +
         '<div class="big">' + Alora.money(a.balance) + '</div>' +
-        '<div class="meta">•••• ' + a.number.slice(-4) + '</div>';
+        '<div class="meta">•••• ' + Alora.escapeHtml(a.number.slice(-4)) + '</div>';
       cards.appendChild(d);
     });
 
-    var all = [];
-    user.accounts.forEach(function (a) {
-      (a.transactions || []).forEach(function (t) {
-        all.push({ a: a, t: t });
-      });
-    });
-    all.sort(function (x, y) { return (y.t.iso || '') < (x.t.iso || '') ? -1 : 1; });
     var list = document.getElementById('tx-list');
     list.innerHTML = '';
-    if (!all.length) {
+    if (!txns.length) {
       list.innerHTML = '<div class="tx-empty">No transactions yet.</div>';
     } else {
-      all.slice(0, 20).forEach(function (row) {
+      txns.forEach(function (t) {
+        var acct = accounts.find(function (x) { return x.id === t.account_id; });
+        var amt = Number(t.amount);
         var li = document.createElement('li');
-        var cls = row.t.amount >= 0 ? 'in' : 'out';
-        var sign = row.t.amount >= 0 ? '+' : '−';
-        li.innerHTML = '<div><div>' + row.t.desc + '</div><div class="tx-meta">' + row.a.type + ' •••• ' + row.a.number.slice(-4) + ' · ' + row.t.date + '</div></div>' +
-          '<div class="tx-amt ' + cls + '">' + sign + Alora.money(Math.abs(row.t.amount)).slice(0) + '</div>';
+        li.innerHTML = '<div><div>' + Alora.escapeHtml(t.description) + '</div>' +
+          '<div class="tx-meta">' + (acct ? Alora.escapeHtml(acct.type) + ' •••• ' + Alora.escapeHtml(acct.number.slice(-4)) + ' · ' : '') + fmtDate(t.created_at) + '</div></div>' +
+          '<div class="tx-amt ' + (amt >= 0 ? 'in' : 'out') + '">' + (amt >= 0 ? '+' : '−') + Alora.money(Math.abs(amt)) + '</div>';
         list.appendChild(li);
       });
     }
@@ -105,43 +123,54 @@
     var from = document.getElementById('t-from');
     var to = document.getElementById('t-to');
     from.innerHTML = ''; to.innerHTML = '';
-    user.accounts.forEach(function (a, i) {
+    accounts.forEach(function (a, i) {
       var o1 = document.createElement('option');
-      o1.value = i; o1.textContent = a.type + ' •••• ' + a.number.slice(-4);
-      var o2 = o1.cloneNode(true);
-      from.appendChild(o1); to.appendChild(o2);
+      o1.value = a.id; o1.textContent = a.type + ' •••• ' + a.number.slice(-4);
+      from.appendChild(o1);
+      to.appendChild(o1.cloneNode(true));
     });
-    if (user.accounts.length > 1) to.selectedIndex = 1;
+    if (accounts.length > 1) to.selectedIndex = 1;
   }
 
-  document.getElementById('btn-transfer').addEventListener('click', function () {
+  document.getElementById('btn-transfer').addEventListener('click', async function () {
     var msg = document.getElementById('t-msg');
     msg.textContent = ''; msg.className = 'money-msg';
-    var fi = Number(document.getElementById('t-from').value);
-    var ti = Number(document.getElementById('t-to').value);
+    var fromId = document.getElementById('t-from').value;
+    var toId = document.getElementById('t-to').value;
     var amt = Number(document.getElementById('t-amount').value);
-    if (fi === ti) { msg.textContent = 'Choose two different accounts.'; msg.classList.add('err'); return; }
+    if (!fromId || !toId || fromId === toId) { msg.textContent = 'Choose two different accounts.'; msg.classList.add('err'); return; }
     if (!(amt > 0)) { msg.textContent = 'Enter an amount greater than zero.'; msg.classList.add('err'); return; }
-    if (user.accounts[fi].balance < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
-    var date = Alora.todayStr(), iso = Alora.nowIso();
-    user.accounts[fi].balance = Math.round((user.accounts[fi].balance - amt) * 100) / 100;
-    user.accounts[ti].balance = Math.round((user.accounts[ti].balance + amt) * 100) / 100;
-    user.accounts[fi].transactions.push({ desc: 'Transfer to ' + user.accounts[ti].type, date: date, amount: -amt, iso: iso });
-    user.accounts[ti].transactions.push({ desc: 'Transfer from ' + user.accounts[fi].type, date: date, amount: amt, iso: iso });
-    db.users[email] = user;
-    Alora.saveDb(db);
+    var from = accounts.find(function (a) { return a.id === fromId; });
+    var to = accounts.find(function (a) { return a.id === toId; });
+    if (Number(from.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
+
+    msg.textContent = 'Processing…';
+    var nb1 = Math.round((Number(from.balance) - amt) * 100) / 100;
+    var nb2 = Math.round((Number(to.balance) + amt) * 100) / 100;
+    var u1 = await supa.from('accounts').update({ balance: nb1 }).eq('id', fromId);
+    var u2 = await supa.from('accounts').update({ balance: nb2 }).eq('id', toId);
+    if (u1.error || u2.error) { msg.textContent = 'Transfer failed. Please try again.'; msg.classList.add('err'); return; }
+    await supa.from('transactions').insert([
+      { account_id: fromId, description: 'Transfer to ' + to.type, amount: -amt },
+      { account_id: toId, description: 'Transfer from ' + from.type, amount: amt }
+    ]);
     document.getElementById('t-amount').value = '';
     msg.textContent = 'Transfer complete.';
     msg.classList.add('ok');
-    render();
+    loadAll();
   });
 
-  document.getElementById('btn-logout').addEventListener('click', function () {
-    Alora.setSession(null);
+  document.getElementById('btn-logout').addEventListener('click', async function () {
+    await supa.auth.signOut();
     window.location.href = 'login.html';
   });
 
-  render();
+  // Live updates: when the admin (or anyone) changes a balance, refresh.
+  supa.channel('balances')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, function () { loadAll(); })
+    .subscribe();
+
+  loadAll();
 })();
 </script>
 </body>

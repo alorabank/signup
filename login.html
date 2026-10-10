@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alora Bank — Sign In</title>
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="login-wrap">
   <div class="login-card">
     <div class="brand">
-      <div class="brand-mark">A</div>
+      <img class="brand-mark" src="logo.webp" alt="Alora Bank">
       <div class="brand-name">Alora <span>Bank</span></div>
     </div>
     <p class="login-sub">Sign in to your account</p>
@@ -30,43 +31,56 @@
           <option value="admin">Administrator</option>
         </select>
       </div>
-      <button class="btn" type="submit">Sign In</button>
+      <button class="btn" type="submit" id="btn-login">Sign In</button>
       <div class="form-error" id="login-error"></div>
     </form>
     <div class="login-alt">New to Alora Bank? <a href="index.html">Open an account</a></div>
   </div>
 </div>
-<script src="app.js"></script>
+<script src="supa.js"></script>
 <script>
 (function () {
   var form = document.getElementById('login-form');
   var errBox = document.getElementById('login-error');
-  form.addEventListener('submit', function (e) {
+  var btn = document.getElementById('btn-login');
+
+  // Already signed in? Go straight to the right home.
+  supa.auth.getSession().then(async function (s) {
+    if (s.data.session) {
+      var p = await supa.from('profiles').select('is_admin').eq('id', s.data.session.user.id).single();
+      if (p.data) window.location.href = p.data.is_admin ? 'admin.html' : 'dashboard.html';
+    }
+  });
+
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
+    errBox.textContent = '';
     var email = document.getElementById('login-email').value.trim().toLowerCase();
     var password = document.getElementById('login-password').value;
     var role = document.getElementById('login-role').value;
-    errBox.textContent = '';
-    if (!email || !password) {
-      errBox.textContent = 'Enter your email and password.';
-      return;
+    if (!email || !password) { errBox.textContent = 'Enter your email and password.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    try {
+      var res = await supa.auth.signInWithPassword({ email: email, password: password });
+      if (res.error) { errBox.textContent = res.error.message; btn.disabled = false; btn.textContent = 'Sign In'; return; }
+      var prof = await supa.from('profiles').select('is_admin, full_name').eq('id', res.data.user.id).single();
+      if (prof.error || !prof.data) {
+        await supa.auth.signOut();
+        errBox.textContent = 'No bank profile found for this login.';
+        btn.disabled = false; btn.textContent = 'Sign In'; return;
+      }
+      if (role === 'admin' && !prof.data.is_admin) {
+        await supa.auth.signOut();
+        errBox.textContent = 'This account does not have administrator access.';
+        btn.disabled = false; btn.textContent = 'Sign In'; return;
+      }
+      window.location.href = (role === 'admin') ? 'admin.html' : 'dashboard.html';
+    } catch (err) {
+      errBox.textContent = 'Sign in failed. Please try again.';
+      btn.disabled = false; btn.textContent = 'Sign In';
     }
-    var db = Alora.loadDb();
-    var user = db.users[email];
-    if (!user) {
-      errBox.textContent = 'No account found for this email.';
-      return;
-    }
-    if (user.password !== password) {
-      errBox.textContent = 'Incorrect password.';
-      return;
-    }
-    if (role === 'admin' && !user.isAdmin) {
-      errBox.textContent = 'This account does not have administrator access.';
-      return;
-    }
-    Alora.setSession(email);
-    window.location.href = role === 'admin' ? 'admin.html' : 'dashboard.html';
   });
 })();
 </script>
