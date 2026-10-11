@@ -42,7 +42,7 @@ window.Alora = (function () {
       ? '<svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>'
       : '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>';
     document.getElementById('confirm-title').textContent = ok ? 'Transaction Successful' : 'Transaction Pending';
-    document.getElementById('confirm-sub').textContent = ok ? '' : 'Awaiting admin approval.';
+    document.getElementById('confirm-sub').textContent = ok ? '' : 'Transactions usually take 1-3 business days to be processed.';
     document.getElementById('confirm-amount').textContent = money(o.amount);
     var rows = [['From', o.from], ['To', o.to], ['Reference', o.reference], ['Date', o.date]];
     document.getElementById('confirm-details').innerHTML = rows.map(function (r) {
