@@ -106,11 +106,7 @@
   async function loadAll() {
     var s = await supa.auth.getSession();
     if (!s.data.session) { window.location.href = 'login.html'; return; }
-    try {
-      if (sessionStorage.getItem('alora_2fa') !== s.data.session.user.id) {
-        window.location.href = 'login.html'; return;
-      }
-    } catch (e) {}
+
     var uid = s.data.session.user.id;
 
     var p = await supa.from('profiles').select('is_admin').eq('id', uid).single();
