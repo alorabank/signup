@@ -93,11 +93,7 @@
   async function guard() {
     var s = await supa.auth.getSession();
     if (!s.data.session) { window.location.href = 'login.html'; return null; }
-    try {
-      if (sessionStorage.getItem('alora_2fa') !== s.data.session.user.id) {
-        window.location.href = 'login.html'; return null;
-      }
-    } catch (e) {}
+
     var p = await supa.from('profiles').select('is_admin').eq('id', s.data.session.user.id).single();
     if (p.error || !p.data || !p.data.is_admin) { window.location.href = 'login.html'; return null; }
     return true;
