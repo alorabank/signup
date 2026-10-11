@@ -29,10 +29,17 @@
   </div>
 </div>
 <div class="container">
-  <div class="hero">
-    <div class="label">Total deposits under management</div>
-    <div class="value" id="admin-total"><small>$</small>0.00</div>
-    <div class="plan" id="admin-count"></div>
+  <div class="stat-cards">
+    <div class="stat-card">
+      <div class="label">Total deposits under management</div>
+      <div class="value" id="admin-total"><small>$</small>0.00</div>
+      <div class="plan" id="admin-count"></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Logins today</div>
+      <div class="value" id="admin-logins">&mdash;</div>
+      <div class="plan" id="admin-logins-sub"></div>
+    </div>
   </div>
   <div class="panel" style="margin-bottom:20px;">
     <h3>Pending approvals <span class="sub" id="appr-sub"></span></h3>
@@ -358,6 +365,19 @@
     return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
+  async function renderLoginStats() {
+    try {
+      var start = new Date(); start.setHours(0, 0, 0, 0);
+      var r = await supa.from('login_activity').select('success').gte('logged_in_at', start.toISOString()).limit(500);
+      var rows = r.data || [];
+      var bad = rows.filter(function (x) { return !x.success; }).length;
+      var ok = rows.length - bad;
+      document.getElementById('admin-logins').textContent = rows.length;
+      document.getElementById('admin-logins-sub').innerHTML = ok + ' successful' +
+        (bad ? ' &middot; <span style="color:#f0a35e; font-weight:700;">' + bad + ' failed</span>' : '');
+    } catch (e) {}
+  }
+
   async function renderLoginActivity() {
     var r = await supa.from('login_activity').select('*').order('logged_in_at', { ascending: false }).limit(60);
     laRows = r.data || [];
@@ -396,6 +416,7 @@
     render();
     renderApprovals();
     renderLoginActivity();
+    renderLoginStats();
     // Live: new requests appear without refresh.
     supa.channel('approvals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'money_requests' }, function () {
@@ -406,6 +427,7 @@
     supa.channel('logins')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'login_activity' }, function () {
         renderLoginActivity();
+        renderLoginStats();
       })
       .subscribe();
   });
