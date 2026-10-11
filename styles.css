@@ -182,8 +182,10 @@ img.brand-mark {
 .deposit-info span { color: var(--muted); }
 .deposit-info strong { font-weight: 700; letter-spacing: 0.5px; }
 
-.crypto-coin { display: flex; align-items: center; gap: 12px; }
-.crypto-coin img { width: 34px; height: 34px; border-radius: 50%; }
+.crypto-coin { display: flex; align-items: center; gap: 10px; }
+.crypto-coin img { width: 24px; height: 24px; border-radius: 50%; }
+.crypto-name { font-weight: 600; }
+.crypto-sym { color: var(--muted); font-size: 12px; margin-left: 6px; font-weight: 400; }
 .crypto-price { text-align: right; font-weight: 700; }
 .chg-up { color: var(--green); font-size: 12px; font-weight: 600; }
 .chg-down { color: var(--red); font-size: 12px; font-weight: 600; }

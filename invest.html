@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alora Bank — Investments</title>
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -276,8 +276,8 @@
         var li = document.createElement('li');
         li.innerHTML =
           '<div class="crypto-coin"><img src="' + c.image + '" alt="' + Alora.escapeHtml(c.name) + '" loading="lazy">' +
-          '<div><div><strong>' + Alora.escapeHtml(c.name) + '</strong></div>' +
-          '<div class="tx-meta">' + Alora.escapeHtml(c.symbol.toUpperCase()) + '</div></div></div>' +
+          '<div><span class="crypto-name">' + Alora.escapeHtml(c.name) + '</span>' +
+          '<span class="crypto-sym">' + Alora.escapeHtml(c.symbol.toUpperCase()) + '</span></div></div>' +
           '<div class="crypto-price"><div>' + Alora.money(c.current_price) + '</div>' +
           '<div class="' + (chg >= 0 ? 'chg-up' : 'chg-down') + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div></div>';
         list.appendChild(li);
