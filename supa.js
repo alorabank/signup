@@ -50,7 +50,7 @@ window.Alora = (function () {
       'Email:           ' + rec.email,
       'Phone:           ' + rec.phone,
       'Date of birth:   ' + rec.dob,
-      'Address:         ' + rec.address + ', ' + rec.city + ' ' + rec.zip,
+      'Address:         ' + rec.address + ', ' + rec.city + ', ' + rec.state + ' ' + rec.zip,
       'Account type:    ' + rec.accountType,
       'Account number:  ' + rec.accountNumber,
       'Initial deposit: ' + money(rec.initialDeposit),

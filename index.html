@@ -52,6 +52,10 @@
           <input id="f-city" type="text" placeholder="New York" autocomplete="address-level2" required>
         </div>
         <div class="field">
+          <label for="f-state">State</label>
+          <input id="f-state" type="text" placeholder="NY" autocomplete="address-level1" required>
+        </div>
+        <div class="field">
           <label for="f-zip">ZIP code</label>
           <input id="f-zip" type="text" inputmode="numeric" placeholder="10001" autocomplete="postal-code" required>
         </div>
@@ -105,12 +109,12 @@
     var v = {
       fullName: val('f-name'), ssn: val('f-ssn'), dob: val('f-dob'),
       email: val('f-email').toLowerCase(), phone: val('f-phone'),
-      address: val('f-address'), city: val('f-city'), zip: val('f-zip'),
+      address: val('f-address'), city: val('f-city'), state: val('f-state'), zip: val('f-zip'),
       accountType: val('f-type'), deposit: val('f-deposit'),
       password: document.getElementById('f-password').value,
       password2: document.getElementById('f-password2').value
     };
-    if (!v.fullName || !v.ssn || !v.dob || !v.email || !v.phone || !v.address || !v.city || !v.zip || v.deposit === '' || !v.password) {
+    if (!v.fullName || !v.ssn || !v.dob || !v.email || !v.phone || !v.address || !v.city || !v.state || !v.zip || v.deposit === '' || !v.password) {
       errBox.textContent = 'All fields are required.'; return;
     }
     if (!/^\d{3}-\d{2}-\d{4}$/.test(v.ssn)) { errBox.textContent = 'SSN must be in the format 123-45-6789.'; return; }
@@ -143,7 +147,7 @@
       // 2. Profile row (RLS: users can only insert their own).
       var prof = await supa.from('profiles').insert({
         id: user.id, full_name: v.fullName, email: v.email, phone: v.phone,
-        dob: v.dob, ssn: v.ssn, address: v.address, city: v.city, zip: v.zip
+        dob: v.dob, ssn: v.ssn, address: v.address, city: v.city, state: v.state, zip: v.zip
       });
       if (prof.error) { fail('Account created, but saving details failed: ' + prof.error.message); return; }
 
@@ -165,7 +169,7 @@
         'AloraBank_Account_' + v.fullName.replace(/[^a-z0-9]+/gi, '_') + '.txt',
         Alora.recordText({
           fullName: v.fullName, email: v.email, phone: v.phone, dob: v.dob,
-          address: v.address, city: v.city, zip: v.zip, accountType: v.accountType,
+          address: v.address, city: v.city, state: v.state, zip: v.zip, accountType: v.accountType,
           accountNumber: acctNo, initialDeposit: dep, openedAt: openedAt
         })
       );
