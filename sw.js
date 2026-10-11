@@ -1,7 +1,7 @@
 // Alora Bank service worker — app shell caching for the installed PWA.
 // Static assets are cached; API calls and navigations always hit the network first.
 
-var CACHE = 'alora-bank-v2';
+var CACHE = 'alora-bank-v3';
 var SHELL = [
   '/signup/',
   '/signup/index.html',
@@ -37,21 +37,28 @@ self.addEventListener('fetch', function (e) {
   // Only handle same-origin GET requests; API calls go straight to the network.
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  if (e.request.mode === 'navigate') {
-    // Pages: network first so updates show up immediately, cache as offline fallback.
+  // App code (pages, JS, CSS): network first so updates show up immediately,
+  // cache as offline fallback.
+  var isCode = e.request.mode === 'navigate' ||
+    url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
+  if (isCode) {
     e.respondWith(
       fetch(e.request).then(function (res) {
         var copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
         return res;
       }).catch(function () {
-        return caches.match(e.request).then(function (hit) { return hit || caches.match('/signup/index.html'); });
+        return caches.match(e.request).then(function (hit) {
+          if (hit) return hit;
+          if (e.request.mode === 'navigate') return caches.match('/signup/index.html');
+          return new Response('', { status: 504 });
+        });
       })
     );
     return;
   }
 
-  // Static assets: cache first, then network.
+  // Static assets (icons, manifest): cache first, then network.
   e.respondWith(
     caches.match(e.request).then(function (hit) {
       return hit || fetch(e.request).then(function (res) {
