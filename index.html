@@ -153,7 +153,8 @@
 
       // 3. Bank account (opens with a zero balance).
       var acct = await supa.from('accounts').insert({
-        owner_id: user.id, type: v.accountType, number: acctNo, balance: 0
+        owner_id: user.id, type: v.accountType, number: acctNo,
+        routing_number: Alora.genRoutingNumber(), balance: 0
       }).select().single();
       if (acct.error) { fail('Details saved, but opening the bank account failed: ' + acct.error.message); return; }
 

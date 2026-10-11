@@ -65,14 +65,24 @@ window.Alora = (function () {
     });
   }
 
+  // 9-digit routing number with a valid ABA checksum.
+  function genRoutingNumber() {
+    var d = [];
+    for (var i = 0; i < 8; i++) d.push(Math.floor(Math.random() * 10));
+    var sum = 3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5]);
+    d.push((10 - (sum % 10)) % 10);
+    return d.join('');
+  }
+
   return {
     money: money,
     todayStr: todayStr,
     genAccountNumber: genAccountNumber,
+    genRoutingNumber: genRoutingNumber,
     downloadTxt: downloadTxt,
     recordText: recordText,
     escapeHtml: escapeHtml,
-    // Alora Bank routing number (shown on the deposit popup).
+    // Fallback routing number (older accounts predate per-account numbers).
     ROUTING_NUMBER: '026073008'
   };
 })();

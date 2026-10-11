@@ -165,6 +165,7 @@
           ['SSN', currentRec.ssn],
           ['Address', currentRec.address + ', ' + currentRec.city + ', ' + currentRec.state + ' ' + currentRec.zip],
           ['Account type', currentRec.accountType], ['Account number', currentRec.accountNumber],
+          ['Routing number', a.routing_number || '—'],
           ['Initial deposit', Alora.money(currentRec.initialDeposit)],
           ['Current balance', Alora.money(a.balance)],
           ['Opened', currentRec.openedAt]

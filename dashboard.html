@@ -185,7 +185,7 @@
         var a = accounts.find(function (x) { return x.id === document.getElementById('m-account').value; });
         document.getElementById('m-deposit-info').innerHTML = a
           ? '<span>Account number</span><strong>' + Alora.escapeHtml(a.number) + '</strong>' +
-            '<span>Routing number</span><strong>' + Alora.ROUTING_NUMBER + '</strong>'
+            '<span>Routing number</span><strong>' + Alora.escapeHtml(a.routing_number || Alora.ROUTING_NUMBER) + '</strong>'
           : '';
       };
       document.getElementById('m-account').addEventListener('change', updDepInfo);
