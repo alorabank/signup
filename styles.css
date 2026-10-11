@@ -585,3 +585,6 @@ body.chase-bg { background: #071a38; }
 .confirm-details .row strong { font-weight: 700; color: var(--navy); text-align: right; word-break: break-word; }
 .confirm-done { width: 100%; background: #0e9f5d; color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 17px; font-weight: 700; margin-top: 22px; cursor: pointer; }
 .confirm-done:active { transform: scale(.99); }
+
+/* ---------- admin note on customer requests ---------- */
+.tx-note { font-size: 13px; color: #6b5b2e; background: #faf5e6; border: 1px solid #e8d9a8; border-radius: 8px; padding: 8px 10px; margin-top: 8px; line-height: 1.5; }
