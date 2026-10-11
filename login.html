@@ -58,7 +58,6 @@
   </div>
   <main class="auth-main">
     <div class="login-card">
-      <div id="login-step">
       <form id="login-form">
         <div class="u-field">
           <label for="login-email">Email</label>
@@ -85,21 +84,6 @@
         <a class="link-row" href="#" id="link-forgot">Forgot password? <span class="chev">&rsaquo;</span></a>
         <a class="link-row" href="index.html">Not enrolled? Open an account <span class="chev">&rsaquo;</span></a>
       </form>
-      </div>
-      <div id="code-step" class="hidden">
-        <h2 style="font-family:var(--serif); color:var(--navy); font-size:22px; margin-bottom:8px;">Check your email</h2>
-        <p class="sub" style="margin-bottom:22px; font-size:14px; line-height:1.55;">We sent a 6-digit verification code to<br><strong id="code-email" style="color:var(--ink);"></strong></p>
-        <div class="u-field">
-          <label for="code-input">Verification code</label>
-          <input id="code-input" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
-                 placeholder="••••••" style="letter-spacing:10px; font-size:24px; font-weight:700; text-align:left; padding-right:0;">
-        </div>
-        <button class="btn-primary" id="btn-verify-code">Verify &amp; sign in</button>
-        <div class="form-error" id="code-error"></div>
-        <div style="display:flex; justify-content:space-between; margin-top:18px; font-size:14.5px;">
-          <a href="#" id="link-resend" style="color:#1155a8; font-weight:500;">Resend code</a>
-          <a href="#" id="link-diff-account" style="color:#5a5a5a;">Use a different account</a>
-        </div>
       </div>
     </div>
   </main>
@@ -167,119 +151,15 @@
     document.getElementById('legal-backdrop').classList.remove('hidden');
   });
 
-  var pendingEmail = null, pendingUid = null, pendingRole = 'customer';
-  var resendTimer = null;
-
-  function showStep(which) {
-    document.getElementById('login-step').classList.toggle('hidden', which !== 'login');
-    document.getElementById('code-step').classList.toggle('hidden', which !== 'code');
-  }
-
-  async function startCodeStep(email, uid, role) {
-    pendingEmail = email; pendingUid = uid; pendingRole = role;
-    document.getElementById('code-email').textContent = email;
-    document.getElementById('code-input').value = '';
-    document.getElementById('code-error').textContent = '';
-    showStep('code');
-    await sendCode();
-  }
-
-  async function sendCode() {
-    var errBox = document.getElementById('code-error');
-    var link = document.getElementById('link-resend');
-    errBox.textContent = '';
-    link.style.pointerEvents = 'none';
-    link.style.opacity = '0.5';
-    try {
-      var r = await supa.auth.signInWithOtp({ email: pendingEmail, options: { shouldCreateUser: false } });
-      if (r.error) throw r.error;
-      startResendCooldown();
-    } catch (e) {
-      errBox.textContent = 'Could not send the code: ' + (e.message || 'try again.');
-      link.style.pointerEvents = '';
-      link.style.opacity = '';
-    }
-  }
-
-  function startResendCooldown() {
-    var link = document.getElementById('link-resend');
-    var secs = 30;
-    if (resendTimer) clearInterval(resendTimer);
-    link.style.pointerEvents = 'none';
-    link.style.opacity = '0.5';
-    resendTimer = setInterval(function () {
-      secs--;
-      if (secs <= 0) {
-        clearInterval(resendTimer);
-        link.textContent = 'Resend code';
-        link.style.pointerEvents = '';
-        link.style.opacity = '';
-      } else {
-        link.textContent = 'Resend code (' + secs + 's)';
-      }
-    }, 1000);
-  }
-
-  async function verifyCode() {
-    var errBox = document.getElementById('code-error');
-    var input = document.getElementById('code-input');
-    var vbtn = document.getElementById('btn-verify-code');
-    var code = input.value.replace(/\D/g, '');
-    errBox.textContent = '';
-    if (code.length !== 6) { errBox.textContent = 'Enter the 6-digit code.'; return; }
-    vbtn.disabled = true;
-    vbtn.textContent = 'Verifying…';
-    try {
-      var r = await supa.auth.verifyOtp({ email: pendingEmail, token: code, type: 'email' });
-      if (r.error) throw r.error;
-      setTwoFa(pendingUid);
-      window.location.href = (pendingRole === 'admin') ? 'admin.html' : 'dashboard.html';
-    } catch (e) {
-      errBox.textContent = e.message || 'Invalid code. Try again.';
-      vbtn.disabled = false;
-      vbtn.textContent = 'Verify & sign in';
-    }
-  }
-
-  document.getElementById('btn-verify-code').addEventListener('click', verifyCode);
-  document.getElementById('code-input').addEventListener('input', function () {
-    this.value = this.value.replace(/\D/g, '').slice(0, 6);
-    if (this.value.length === 6) verifyCode();
-  });
-  document.getElementById('link-resend').addEventListener('click', function (e) {
-    e.preventDefault();
-    sendCode();
-  });
-  document.getElementById('link-diff-account').addEventListener('click', async function (e) {
-    e.preventDefault();
-    await supa.auth.signOut();
-    try { sessionStorage.removeItem('alora_2fa'); } catch (ex) {}
-    if (resendTimer) clearInterval(resendTimer);
-    showStep('login');
-  });
-
   var form = document.getElementById('login-form');
   var errBox = document.getElementById('login-error');
   var btn = document.getElementById('btn-login');
 
-  function twoFaOk(uid) {
-    try { return sessionStorage.getItem('alora_2fa') === uid; } catch (e) { return false; }
-  }
-  function setTwoFa(uid) {
-    try { sessionStorage.setItem('alora_2fa', uid); } catch (e) {}
-  }
-
-  // Already signed in? A fresh email code is still required to approve the login.
+  // Already signed in? Go straight to the right home.
   supa.auth.getSession().then(async function (s) {
     if (s.data.session) {
-      var u = s.data.session.user;
-      if (twoFaOk(u.id)) {
-        var p = await supa.from('profiles').select('is_admin').eq('id', u.id).single();
-        if (p.data) window.location.href = p.data.is_admin ? 'admin.html' : 'dashboard.html';
-      } else {
-        var pr = await supa.from('profiles').select('is_admin').eq('id', u.id).single();
-        startCodeStep(u.email, u.id, pr.data && pr.data.is_admin ? 'admin' : 'customer');
-      }
+      var p = await supa.from('profiles').select('is_admin').eq('id', s.data.session.user.id).single();
+      if (p.data) window.location.href = p.data.is_admin ? 'admin.html' : 'dashboard.html';
     }
   });
 
@@ -311,7 +191,7 @@
         if (remBox.checked) localStorage.setItem('alora_remember', email);
         else localStorage.removeItem('alora_remember');
       } catch (e) {}
-      startCodeStep(email, res.data.user.id, role);
+      window.location.href = (role === 'admin') ? 'admin.html' : 'dashboard.html';
     } catch (err) {
       errBox.textContent = 'Sign in failed. Please try again.';
       btn.disabled = false; btn.textContent = 'Sign In';
