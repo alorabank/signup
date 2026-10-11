@@ -218,7 +218,7 @@
         '<td>' + labels[r.kind] + '</td>' +
         '<td>' + Alora.escapeHtml(a.type || '—') + ' •••• ' + Alora.escapeHtml((a.number || '').slice(-4)) + '</td>' +
         '<td><strong>' + Alora.money(r.amount) + '</strong></td>' +
-        '<td>' + Alora.escapeHtml(r.details || '—') + '</td>' +
+        '<td>' + Alora.escapeHtml(Alora.formatDest(r.details)) + '</td>' +
         '<td>' + new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</td>' +
         '<td><button class="btn btn-sm" data-approve="' + r.id + '">Approve</button></td>' +
         '<td><button class="btn btn-sm btn-ghost" data-reject="' + r.id + '">Reject</button></td>';
@@ -255,15 +255,55 @@
         setTimeout(function () { btn.textContent = 'Approve'; btn.disabled = false; }, 1500);
         return;
       }
+      // For Alora-to-Alora transfers, resolve the recipient BEFORE claiming.
+      var recipAcctId = null, recipName = null;
+      if (rq.kind === 'withdrawal' && rq.details && rq.details.indexOf('ALORA::') === 0) {
+        var parts = rq.details.split('::');
+        var ident = (parts[1] || '').trim();
+        var rrt = (parts[2] || '').trim();
+        if (ident.indexOf('@') > -1) {
+          var rp = await supa.from('profiles').select('id, full_name').eq('email', ident).limit(1);
+          if (rp.data && rp.data.length) {
+            var ra = await supa.from('accounts').select('id').eq('owner_id', rp.data[0].id).order('opened_at', { ascending: true }).limit(1);
+            if (ra.data && ra.data.length) { recipAcctId = ra.data[0].id; recipName = rp.data[0].full_name; }
+          }
+        } else {
+          var rq2 = await supa.from('accounts').select('id, owner_id, routing_number').eq('number', ident).limit(1);
+          if (rq2.data && rq2.data.length && (!rrt || rq2.data[0].routing_number === rrt)) {
+            var rp2 = await supa.from('profiles').select('full_name').eq('id', rq2.data[0].owner_id).single();
+            recipAcctId = rq2.data[0].id;
+            recipName = (rp2.data && rp2.data.full_name) || 'Alora user';
+          }
+        }
+        if (!recipAcctId) {
+          btn.textContent = 'No recipient';
+          setTimeout(function () { btn.textContent = 'Approve'; btn.disabled = false; }, 1500);
+          return;
+        }
+        if (recipAcctId === rq.account_id) {
+          btn.textContent = 'Same account';
+          setTimeout(function () { btn.textContent = 'Approve'; btn.disabled = false; }, 1500);
+          return;
+        }
+      }
       // Claim the request first (only if still pending — prevents double-apply).
       var claim = await supa.from('money_requests').update({ status: 'approved' }).eq('id', id).eq('status', 'pending').select();
       if (!claim.data || !claim.data.length) { renderApprovals(); return; }
       var nb = Math.round((bal + signed) * 100) / 100;
       await supa.from('accounts').update({ balance: nb }).eq('id', rq.account_id);
       var desc = rq.kind === 'deposit' ? 'Deposit approved'
-        : rq.kind === 'withdrawal' ? 'Withdrawal approved'
+        : rq.kind === 'withdrawal' ? 'Withdrawal approved' + (recipName ? ' — sent to ' + recipName : '')
         : 'Bill payment approved' + (rq.details ? ' — ' + rq.details : '');
       await supa.from('transactions').insert({ account_id: rq.account_id, description: desc, amount: signed });
+      // Credit the Alora recipient.
+      if (recipAcctId) {
+        var rb = await supa.from('accounts').select('balance').eq('id', recipAcctId).single();
+        var sp = await supa.from('profiles').select('full_name').eq('id', rq.owner_id).single();
+        var senderName = (sp.data && sp.data.full_name) || 'Alora user';
+        var rnb = Math.round((Number(rb.data.balance) + amt) * 100) / 100;
+        await supa.from('accounts').update({ balance: rnb }).eq('id', recipAcctId);
+        await supa.from('transactions').insert({ account_id: recipAcctId, description: 'Transfer from ' + senderName, amount: amt });
+      }
       renderApprovals();
       render();
     } catch (e) {

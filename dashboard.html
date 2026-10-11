@@ -132,7 +132,7 @@
         : q.status === 'approved' ? 'status-active' : 'status-suspended';
       var li = document.createElement('li');
       li.innerHTML = '<div><div>' + labels[q.kind] + ' — ' + Alora.money(q.amount) +
-        (q.details ? ' · ' + Alora.escapeHtml(q.details) : '') + '</div>' +
+        (q.details ? ' · ' + Alora.escapeHtml(Alora.formatDest(q.details)) : '') + '</div>' +
         '<div class="tx-meta">' + (acct ? Alora.escapeHtml(acct.type) + ' •••• ' + Alora.escapeHtml(acct.number.slice(-4)) + ' · ' : '') +
         fmtDate(q.created_at) + '</div></div>' +
         '<span class="status-pill ' + pill + '">' + q.status + '</span>';
@@ -175,9 +175,18 @@
       html += '<div class="field"><label for="m-payee">Payee</label><input id="m-payee" type="text" placeholder="Electric company"></div>';
     }
     if (action === 'withdraw') {
-      html += '<div class="field"><label for="m-bank">Destination bank name</label><input id="m-bank" type="text" placeholder="Chase Bank"></div>' +
+      html += '<div class="field"><label for="m-dest-type">Send to</label>' +
+        '<select id="m-dest-type"><option value="bank">Bank account</option>' +
+        '<option value="alora">Another Alora user</option></select></div>' +
+        '<div id="m-dest-bank">' +
+        '<div class="field"><label for="m-bank">Destination bank name</label><input id="m-bank" type="text" placeholder="Chase Bank"></div>' +
         '<div class="field"><label for="m-dacct">Destination account number</label><input id="m-dacct" type="text" inputmode="numeric" placeholder="Account number"></div>' +
-        '<div class="field"><label for="m-drouting">Destination routing number</label><input id="m-drouting" type="text" inputmode="numeric" placeholder="9-digit routing number"></div>';
+        '<div class="field"><label for="m-drouting">Destination routing number</label><input id="m-drouting" type="text" inputmode="numeric" placeholder="9-digit routing number"></div>' +
+        '</div>' +
+        '<div id="m-dest-alora" class="hidden">' +
+        '<div class="field"><label for="m-recipient">Recipient email or account number</label><input id="m-recipient" type="text" placeholder="Email or account number"></div>' +
+        '<div class="field"><label for="m-rrouting">Routing number <span style="color:var(--muted)">(only if using account number)</span></label><input id="m-rrouting" type="text" inputmode="numeric" placeholder="9-digit routing number"></div>' +
+        '</div>';
     }
     if (action === 'deposit') {
       html += '<div class="deposit-info" id="m-deposit-info"></div>';
@@ -196,6 +205,16 @@
       };
       document.getElementById('m-account').addEventListener('change', updDepInfo);
       updDepInfo();
+    }
+    if (action === 'withdraw') {
+      var dtypeSel = document.getElementById('m-dest-type');
+      var toggleDest = function () {
+        var isBank = dtypeSel.value === 'bank';
+        document.getElementById('m-dest-bank').classList.toggle('hidden', !isBank);
+        document.getElementById('m-dest-alora').classList.toggle('hidden', isBank);
+      };
+      dtypeSel.addEventListener('change', toggleDest);
+      toggleDest();
     }
     var msg = document.getElementById('money-msg');
     msg.textContent = ''; msg.className = 'money-msg';
@@ -245,11 +264,24 @@
     if (!(amt > 0)) { msg.textContent = 'Enter an amount greater than zero.'; msg.classList.add('err'); return; }
     if (payeeEl && !details) { msg.textContent = 'Enter a payee.'; msg.classList.add('err'); return; }
     if (moneyAction === 'withdraw') {
-      var bank = document.getElementById('m-bank').value.trim();
-      var dacct = document.getElementById('m-dacct').value.trim();
-      var drouting = document.getElementById('m-drouting').value.trim();
-      if (!bank || !dacct || !drouting) { msg.textContent = 'Enter the destination bank details.'; msg.classList.add('err'); return; }
-      details = bank + ' · Acct ' + dacct + ' · Rtg ' + drouting;
+      var dtype = document.getElementById('m-dest-type').value;
+      if (dtype === 'bank') {
+        var bank = document.getElementById('m-bank').value.trim();
+        var dacct = document.getElementById('m-dacct').value.trim();
+        var drouting = document.getElementById('m-drouting').value.trim();
+        if (!bank || !dacct || !drouting) { msg.textContent = 'Enter the destination bank details.'; msg.classList.add('err'); return; }
+        details = 'BANK::' + bank + '::' + dacct + '::' + drouting;
+      } else {
+        var recip = document.getElementById('m-recipient').value.trim();
+        var rrouting = document.getElementById('m-rrouting').value.trim();
+        if (!recip) { msg.textContent = 'Enter the recipient\'s email or account number.'; msg.classList.add('err'); return; }
+        if (recip.indexOf('@') === -1 && !rrouting) { msg.textContent = 'Enter the routing number for the account.'; msg.classList.add('err'); return; }
+        // Can't send to yourself.
+        var ownEmail = (s.data.session.user.email || '').toLowerCase();
+        var selfAcct = accounts.some(function (a) { return a.number === recip; });
+        if (recip.toLowerCase() === ownEmail || selfAcct) { msg.textContent = 'You cannot send money to yourself.'; msg.classList.add('err'); return; }
+        details = 'ALORA::' + recip + '::' + rrouting;
+      }
     }
     if (meta.kind !== 'deposit') {
       var acct = accounts.find(function (a) { return a.id === accountId; });

@@ -153,7 +153,7 @@
         : q.status === 'approved' ? 'status-active' : 'status-suspended';
       var li = document.createElement('li');
       li.innerHTML = '<div><div>' + labels[q.kind] + ' — ' + Alora.money(q.amount) +
-        (q.details ? ' · ' + Alora.escapeHtml(q.details) : '') + '</div>' +
+        (q.details ? ' · ' + Alora.escapeHtml(Alora.formatDest(q.details)) : '') + '</div>' +
         '<div class="tx-meta">' + fmtDate(q.created_at) + '</div></div>' +
         '<span class="status-pill ' + pill + '">' + q.status + '</span>';
       list.appendChild(li);

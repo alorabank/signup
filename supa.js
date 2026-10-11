@@ -65,6 +65,19 @@ window.Alora = (function () {
     });
   }
 
+  // Human-readable destination for a money request's details field.
+  // Encoded forms: "BANK::<bank>::<acct>::<routing>", "ALORA::<email|acct>::<routing?>".
+  function formatDest(details) {
+    if (!details) return '—';
+    var p = String(details).split('::');
+    if (p[0] === 'BANK' && p.length >= 4) return '→ ' + p[1] + ' ····' + String(p[2]).slice(-4);
+    if (p[0] === 'ALORA' && p.length >= 2) {
+      var id = p[1] || '';
+      return id.indexOf('@') > -1 ? '→ Alora user ' + id : '→ Alora acct ····' + id.slice(-4);
+    }
+    return details;
+  }
+
   // 9-digit routing number with a valid ABA checksum.
   function genRoutingNumber() {
     var d = [];
@@ -82,6 +95,7 @@ window.Alora = (function () {
     downloadTxt: downloadTxt,
     recordText: recordText,
     escapeHtml: escapeHtml,
+    formatDest: formatDest,
     // Fallback routing number (older accounts predate per-account numbers).
     ROUTING_NUMBER: '026073008',
     // Bitcoin deposit address shown on the investment deposit popup.
