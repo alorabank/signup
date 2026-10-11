@@ -477,3 +477,75 @@ body { background: #dfe3e8; }
   display: block; width: 100%; background: none; border: none; padding: 14px;
   font-size: 15px; font-weight: 600; color: var(--red); cursor: pointer; font-family: var(--sans);
 }
+
+/* ---------- Chase-style auth pages ---------- */
+body.chase-bg { background: #071a38; }
+.bg-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, #040d20 0%, #0a2247 32%, #1e4f8f 56%, #5f8cc4 74%, #d29a63 90%, #eccb92 100%);
+}
+.bg-scene svg { position: absolute; bottom: 0; left: 0; width: 100%; height: 48%; }
+.chase-wrap { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column; }
+.auth-top { text-align: center; padding: 36px 16px 24px; }
+.wordmark { color: #fff; font-family: var(--serif); font-size: 36px; letter-spacing: 7px; font-weight: 700; text-indent: 7px; }
+.wordmark small { display: block; font-family: var(--sans); font-size: 12px; letter-spacing: 13px; text-indent: 13px; color: rgba(255,255,255,.88); font-weight: 500; margin-top: 4px; }
+.auth-main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 4px 18px 34px; }
+.login-card {
+  background: #fff; border-radius: 14px; width: 100%; max-width: 430px;
+  padding: 32px 30px 28px; box-shadow: 0 26px 60px rgba(0,0,0,.38);
+}
+.login-card.wide { max-width: 660px; }
+.u-field { position: relative; margin-bottom: 28px; }
+.u-field > label { display: block; font-size: 16px; color: #5a5a5a; margin-bottom: 0; }
+.u-field input, .u-field select {
+  width: 100%; border: none; border-bottom: 2px solid #2f6db3; border-radius: 0;
+  padding: 9px 64px 9px 0; font-size: 17px; outline: none; background: transparent;
+  font-family: var(--sans); color: var(--ink);
+}
+.u-field select { padding-right: 8px; }
+.u-field input:focus, .u-field select:focus { border-bottom-color: var(--navy); }
+.show-btn {
+  position: absolute; right: 0; bottom: 10px; background: none; border: none;
+  color: #2f6db3; font-size: 16px; font-weight: 500; cursor: pointer; font-family: var(--sans); padding: 4px 0 4px 8px;
+}
+.u-row { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 24px; }
+.u-check { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #333; cursor: pointer; }
+.u-check input { width: 22px; height: 22px; accent-color: #2f6db3; }
+.btn-primary {
+  display: block; width: 100%; background: #1155a8; color: #fff; border: none; border-radius: 8px;
+  padding: 15px; font-size: 18px; font-weight: 600; font-family: var(--sans); cursor: pointer;
+  box-shadow: 0 4px 14px rgba(17,85,168,.35); transition: filter .12s ease;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.07); }
+.btn-primary:disabled { opacity: .65; }
+.or-row { display: flex; align-items: center; gap: 14px; margin: 22px 0; color: #2f6db3; font-size: 16px; }
+.or-row::before, .or-row::after { content: ''; flex: 1; height: 1px; background: #c9d4e2; }
+.link-row { display: block; color: #1155a8; font-size: 16.5px; text-decoration: none; margin: 16px 0 4px; font-weight: 500; }
+.link-row:hover { text-decoration: underline; }
+.link-row .chev { font-size: 19px; }
+.auth-footer { position: relative; z-index: 1; background: rgba(255,255,255,.97); padding: 24px 18px 34px; text-align: center; }
+.social-row { display: flex; justify-content: center; gap: 28px; margin-bottom: 18px; }
+.social-row svg { width: 25px; height: 25px; color: #5a5a5a; }
+.legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 30px; max-width: 640px; margin: 0 auto; }
+.legal-links button { background: none; border: none; color: #5a5a5a; font-size: 14.5px; text-decoration: underline; cursor: pointer; font-family: var(--sans); padding: 2px; }
+.legal-links button:hover { color: var(--navy); }
+.legal-modal-backdrop { position: fixed; inset: 0; background: rgba(4,13,32,.6); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 22px; }
+.legal-modal { background: #fff; border-radius: 14px; max-width: 480px; width: 100%; padding: 28px; box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+.legal-modal h3 { font-family: var(--serif); color: var(--navy); font-size: 20px; margin-bottom: 12px; }
+.legal-modal p { font-size: 14px; line-height: 1.65; color: #444; margin-bottom: 10px; }
+
+/* underline inputs + chase buttons inside the white auth card */
+.login-card .field label { font-size: 15px; color: #5a5a5a; font-weight: 400; }
+.login-card .field input, .login-card .field select {
+  border: none; border-bottom: 2px solid #2f6db3; border-radius: 0;
+  background: transparent; padding: 9px 0; font-size: 16px;
+}
+.login-card .field input:focus, .login-card .field select:focus {
+  border-bottom-color: var(--navy); box-shadow: none; background: transparent;
+}
+.login-card .btn {
+  background: #1155a8; border: none; border-radius: 8px; padding: 15px;
+  font-size: 17px; box-shadow: 0 4px 14px rgba(17,85,168,.35);
+}
+.login-card .btn:hover:not(:disabled) { filter: brightness(1.07); box-shadow: 0 6px 18px rgba(17,85,168,.4); transform: none; }
+.login-card .btn-ghost { background: #fff; color: var(--navy); border: 1px solid var(--border); box-shadow: none; }
+.login-card .agreement-box { background: #fbfcfe; }
