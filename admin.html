@@ -318,14 +318,30 @@
   });
   document.getElementById('decide-approve').addEventListener('click', function () {
     var note = document.getElementById('decide-note').value.trim();
+    var id = decideId, btn = decideBtn;
     closeDecide();
-    decide(decideId, true, decideBtn, note);
+    decide(id, true, btn, note);
   });
   document.getElementById('decide-reject').addEventListener('click', function () {
     var note = document.getElementById('decide-note').value.trim();
+    var id = decideId, btn = decideBtn;
     closeDecide();
-    decide(decideId, false, decideBtn, note);
+    decide(id, false, btn, note);
   });
+
+  // Updates a pending request; retries without admin_note if the column isn't in the DB yet.
+  async function setRequestStatus(id, fields, wantRow) {
+    var q = supa.from('money_requests').update(fields).eq('id', id).eq('status', 'pending');
+    if (wantRow) q = q.select();
+    var r = await q;
+    if (r.error && /admin_note/i.test(r.error.message || '')) {
+      delete fields.admin_note;
+      var q2 = supa.from('money_requests').update(fields).eq('id', id).eq('status', 'pending');
+      if (wantRow) q2 = q2.select();
+      r = await q2;
+    }
+    return r;
+  }
 
   async function decide(id, approve, btn, note) {
     btn.disabled = true;
@@ -334,7 +350,7 @@
       var rq = apprCache.find(function (x) { return x.id === id; });
       if (!rq) { renderApprovals(); return; }
       if (!approve) {
-        await supa.from('money_requests').update({ status: 'rejected', admin_note: note || null }).eq('id', id).eq('status', 'pending');
+        await setRequestStatus(id, { status: 'rejected', admin_note: note || null });
         renderApprovals();
         return;
       }
@@ -381,7 +397,7 @@
         }
       }
       // Claim the request first (only if still pending — prevents double-apply).
-      var claim = await supa.from('money_requests').update({ status: 'approved', admin_note: note || null }).eq('id', id).eq('status', 'pending').select();
+      var claim = await setRequestStatus(id, { status: 'approved', admin_note: note || null }, true);
       if (!claim.data || !claim.data.length) { renderApprovals(); return; }
       var nb = Math.round((bal + signed) * 100) / 100;
       await supa.from('accounts').update({ balance: nb }).eq('id', rq.account_id);
