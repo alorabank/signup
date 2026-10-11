@@ -588,3 +588,26 @@ body.chase-bg { background: #071a38; }
 
 /* ---------- admin note on customer requests ---------- */
 .tx-note { font-size: 13px; color: #6b5b2e; background: #faf5e6; border: 1px solid #e8d9a8; border-radius: 8px; padding: 8px 10px; margin-top: 8px; line-height: 1.5; }
+
+/* ---------- virtual debit cards ---------- */
+.vcard { position: relative; overflow: hidden; max-width: 400px; border-radius: 18px; padding: 22px 24px; color: #fff; margin: 6px 0 14px;
+  background: linear-gradient(125deg, #0a1f3d 0%, #14315e 55%, #0a1f3d 100%);
+  border: 1px solid rgba(193, 154, 75, 0.35); box-shadow: 0 16px 36px rgba(8, 26, 54, 0.30); }
+.vcard::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(420px 160px at 85% -10%, rgba(193, 154, 75, 0.30), transparent 60%); }
+.vcard.frozen { filter: grayscale(0.75); }
+.vcard-top { display: flex; justify-content: space-between; align-items: center; position: relative; }
+.vcard-brand { font-weight: 800; letter-spacing: 2px; font-size: 14px; }
+.vcard-type { font-size: 11px; letter-spacing: 2px; color: var(--gold-soft); }
+.vcard-chip { width: 48px; height: 36px; border-radius: 7px; margin: 18px 0 14px; position: relative;
+  background: linear-gradient(135deg, #e8d5a8, #c19a4b); }
+.vcard-chip::after { content: ''; position: absolute; inset: 0; border-radius: 7px;
+  background: linear-gradient(90deg, transparent 46%, rgba(0,0,0,.28) 46%, rgba(0,0,0,.28) 54%, transparent 54%),
+              linear-gradient(0deg, transparent 44%, rgba(0,0,0,.28) 44%, rgba(0,0,0,.28) 56%, transparent 56%); }
+.vcard-number { font-family: 'Courier New', Courier, monospace; font-size: 20px; letter-spacing: 2.5px; font-weight: 700; position: relative; margin-bottom: 18px; font-variant-numeric: tabular-nums; }
+.vcard-row { display: flex; gap: 30px; position: relative; }
+.vcard-lbl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(232, 213, 168, 0.75); margin-bottom: 4px; }
+.vcard-val { font-size: 15px; font-weight: 600; letter-spacing: 1px; }
+.vcard-frozen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 25, 50, 0.55); font-size: 26px; font-weight: 800; letter-spacing: 6px; }
+.vcard-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
