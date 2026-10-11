@@ -94,6 +94,40 @@
       </div>
     </section>
 
+    <section class="panel" id="panel-cards">
+      <h3>Virtual cards</h3>
+      <div class="field" style="max-width:320px;">
+        <label for="card-account">Card for account</label>
+        <select id="card-account"></select>
+      </div>
+      <div id="card-empty" class="hidden" style="text-align:center; padding:8px 0 4px;">
+        <p style="color:var(--muted); font-size:14.5px; margin-bottom:14px;">No virtual card on this account yet.</p>
+        <button class="btn-primary" id="btn-card-issue" style="max-width:280px;">Get virtual debit card</button>
+      </div>
+      <div id="card-wrap" class="hidden">
+        <div class="vcard" id="vcard">
+          <div class="vcard-top">
+            <span class="vcard-brand">ALORA BANK</span>
+            <span class="vcard-type">DEBIT</span>
+          </div>
+          <div class="vcard-chip"></div>
+          <div class="vcard-number" id="vcard-number"></div>
+          <div class="vcard-row">
+            <div><span class="vcard-lbl">Card holder</span><span class="vcard-val" id="vcard-holder"></span></div>
+            <div><span class="vcard-lbl">Expires</span><span class="vcard-val" id="vcard-expiry"></span></div>
+            <div><span class="vcard-lbl">CVV</span><span class="vcard-val" id="vcard-cvv"></span></div>
+          </div>
+          <div class="vcard-frozen hidden" id="vcard-frozen">FROZEN</div>
+        </div>
+        <div class="vcard-actions">
+          <button class="btn btn-sm btn-ghost" id="btn-card-reveal">Show details</button>
+          <button class="btn btn-sm btn-ghost" id="btn-card-freeze">Freeze</button>
+          <button class="btn btn-sm btn-ghost" id="btn-card-new">Replace card</button>
+        </div>
+      </div>
+      <div class="form-error" id="card-msg"></div>
+    </section>
+
     <section class="panel" id="panel-tx">
       <h3>Recent transactions</h3>
       <ul class="tx-list" id="tx-list"></ul>
@@ -121,6 +155,10 @@
     <button class="tab" id="tabbar-invest">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
       <span>Invest</span>
+    </button>
+    <button class="tab" id="tabbar-cards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      <span>Cards</span>
     </button>
   </nav>
 </div>
@@ -206,6 +244,7 @@
       txns = t.data || [];
     }
     render(txns);
+    loadCards();
   }
 
   function render(txns) {
@@ -554,6 +593,104 @@
   });
   document.getElementById('btn-products').addEventListener('click', function () { window.location.href = 'invest.html'; });
 
+  // ---------- Virtual cards ----------
+  var userCards = [];
+  var cardRevealed = false;
+
+  async function loadCards() {
+    try {
+      var s = await supa.auth.getSession();
+      if (!s.data.session) return;
+      var r = await supa.from('cards').select('*').eq('owner_id', s.data.session.user.id);
+      if (!r.error) userCards = r.data || [];
+    } catch (e) {}
+    fillCardAccounts();
+    paintCard();
+  }
+
+  function fillCardAccounts() {
+    var sel = document.getElementById('card-account');
+    sel.innerHTML = '';
+    accounts.forEach(function (a) {
+      var o = document.createElement('option');
+      o.value = a.id;
+      o.textContent = a.type + ' \u2022\u2022\u2022\u2022 ' + String(a.number).slice(-4);
+      sel.appendChild(o);
+    });
+  }
+
+  function selectedCard() {
+    var aid = document.getElementById('card-account').value;
+    for (var i = 0; i < userCards.length; i++) {
+      if (userCards[i].account_id === aid) return userCards[i];
+    }
+    return null;
+  }
+
+  function paintCard() {
+    var c = selectedCard();
+    var empty = document.getElementById('card-empty');
+    var wrap = document.getElementById('card-wrap');
+    document.getElementById('card-msg').textContent = '';
+    if (!c) { empty.classList.remove('hidden'); wrap.classList.add('hidden'); return; }
+    empty.classList.add('hidden'); wrap.classList.remove('hidden');
+    document.getElementById('vcard-number').textContent = cardRevealed ? Alora.groupCard(c.card_number) : Alora.maskCard(c.card_number);
+    document.getElementById('vcard-holder').textContent = ((profile && profile.full_name) || 'ALORA MEMBER').toUpperCase();
+    document.getElementById('vcard-expiry').textContent = c.expiry;
+    document.getElementById('vcard-cvv').textContent = cardRevealed ? c.cvv : '\u2022\u2022\u2022';
+    document.getElementById('btn-card-reveal').textContent = cardRevealed ? 'Hide details' : 'Show details';
+    document.getElementById('btn-card-freeze').textContent = c.status === 'frozen' ? 'Unfreeze' : 'Freeze';
+    document.getElementById('vcard-frozen').classList.toggle('hidden', c.status !== 'frozen');
+    document.getElementById('vcard').classList.toggle('frozen', c.status === 'frozen');
+  }
+
+  document.getElementById('card-account').addEventListener('change', function () { cardRevealed = false; paintCard(); });
+  document.getElementById('btn-card-reveal').addEventListener('click', function () { cardRevealed = !cardRevealed; paintCard(); });
+  document.getElementById('btn-card-freeze').addEventListener('click', async function () {
+    var c = selectedCard(); if (!c) return;
+    var ns = c.status === 'frozen' ? 'active' : 'frozen';
+    var u = await supa.from('cards').update({ status: ns }).eq('id', c.id);
+    if (!u.error) { c.status = ns; paintCard(); }
+  });
+  document.getElementById('btn-card-new').addEventListener('click', async function () {
+    var c = selectedCard(); if (!c) return;
+    if (!confirm('Replace this card? The old number will stop working.')) return;
+    var u = await supa.from('cards').update({
+      card_number: Alora.genCardNumber(), expiry: Alora.genCardExpiry(), cvv: Alora.genCardCvv(), status: 'active'
+    }).eq('id', c.id).select();
+    if (!u.error && u.data && u.data.length) {
+      for (var i = 0; i < userCards.length; i++) {
+        if (userCards[i].id === c.id) userCards[i] = u.data[0];
+      }
+      cardRevealed = false;
+      paintCard();
+    }
+  });
+  document.getElementById('btn-card-issue').addEventListener('click', async function () {
+    var msg = document.getElementById('card-msg');
+    msg.textContent = '';
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Issuing\u2026';
+    try {
+      var s = await supa.auth.getSession();
+      var ins = await supa.from('cards').insert({
+        account_id: document.getElementById('card-account').value,
+        owner_id: s.data.session.user.id,
+        card_number: Alora.genCardNumber(),
+        expiry: Alora.genCardExpiry(),
+        cvv: Alora.genCardCvv(),
+        status: 'active'
+      }).select();
+      if (ins.error) throw ins.error;
+      userCards.push(ins.data[0]);
+      cardRevealed = false;
+      paintCard();
+    } catch (e) {
+      msg.textContent = e.message || 'Could not issue card.';
+    }
+    btn.disabled = false; btn.textContent = 'Get virtual debit card';
+  });
+
   // Bottom tab bar
   function setTab(el) {
     document.querySelectorAll('.tabbar .tab').forEach(function (t) { t.classList.remove('active'); });
@@ -569,6 +706,11 @@
     setTab(this); openMoney('deposit');
   });
   document.getElementById('tabbar-invest').addEventListener('click', function () { window.location.href = 'invest.html'; });
+  document.getElementById('tabbar-cards').addEventListener('click', function () {
+    setTab(this);
+    var el = document.getElementById('panel-cards');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   document.getElementById('sheet-cancel').addEventListener('click', function () {
     document.getElementById('sheet-backdrop').classList.add('hidden');
   });
