@@ -71,6 +71,21 @@
   </div>
 </div>
 
+
+<div class="modal-backdrop hidden" id="confirm-backdrop">
+  <div class="confirm-modal">
+    <div class="confirm-head">Confirmation<button class="confirm-x" id="confirm-x">&times;</button></div>
+    <div class="confirm-body">
+      <div class="confirm-icon ok" id="confirm-icon"></div>
+      <div class="confirm-title" id="confirm-title"></div>
+      <div class="confirm-sub" id="confirm-sub"></div>
+      <div class="confirm-amount" id="confirm-amount"></div>
+      <div class="confirm-details" id="confirm-details"></div>
+      <button class="confirm-done" id="confirm-done">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop hidden" id="inv-backdrop">
   <div class="modal">
     <h3 id="inv-title">Deposit</h3>
@@ -224,17 +239,30 @@
       if (Number(account.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
       details = 'BTC to: ' + waddr;
     }
+    var ref = Alora.genReference();
     msg.textContent = 'Sending…';
     var ins = await supa.from('money_requests').insert({
       account_id: account.id, owner_id: s.data.session.user.id,
       kind: invAction === 'deposit' ? 'deposit' : 'withdrawal',
-      amount: Math.round(amt * 100) / 100, details: details
+      amount: Math.round(amt * 100) / 100, details: details, reference: ref
     });
     if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
-    msg.textContent = 'Sent for approval.';
-    msg.classList.add('ok');
+    var invLabel = 'Investment ••' + String(account.number).slice(-4);
+    closeInv();
     loadRequests();
-    setTimeout(closeInv, 900);
+    if (invAction === 'deposit') {
+      Alora.showReceipt({
+        status: 'pending', amount: amt, from: 'Bitcoin wallet', to: invLabel,
+        reference: ref, date: new Date().toLocaleDateString('en-US')
+      });
+    } else {
+      var waddr = document.getElementById('inv-waddr').value.trim();
+      Alora.showReceipt({
+        status: 'pending', amount: amt, from: invLabel,
+        to: 'BTC ' + waddr.slice(0, 12) + '…',
+        reference: ref, date: new Date().toLocaleDateString('en-US')
+      });
+    }
   }
 
   document.getElementById('btn-inv-deposit').addEventListener('click', function () { openInv('deposit'); });
