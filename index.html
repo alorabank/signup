@@ -78,6 +78,43 @@
       <div class="form-error" id="form-error"></div>
       <button class="btn" type="submit" id="btn-submit">Confirm &amp; Open Account</button>
     </form>
+    <div id="agreement" class="hidden">
+      <h2 style="margin-bottom:4px;">Account Agreement</h2>
+      <p class="sub" style="margin-bottom:16px;">Please read the agreement below before your account is opened.</p>
+      <div class="agreement-box">
+        <h4>Alora Bank — Account Agreement</h4>
+        <p>By accepting this agreement you open an account with Alora Bank and agree to the terms below.</p>
+        <h4>1. Account ownership</h4>
+        <p>Your account is opened in the legal name you provided. You are responsible for keeping your login credentials confidential and for all activity conducted through your account.</p>
+        <h4>2. Deposits</h4>
+        <p>Deposits may be made through the channels provided by the bank. All deposits are subject to verification and approval before funds are made available in your account.</p>
+        <h4>3. Withdrawals and transfers</h4>
+        <p>Withdrawal requests, including transfers to other Alora Bank customers or to external accounts, are subject to review and approval. Approved withdrawals are processed to the destination you specified.</p>
+        <h4>4. Accurate information</h4>
+        <p>You agree that the personal information provided during account opening is true and complete, and you will update it promptly if it changes.</p>
+        <h4>5. Electronic communications</h4>
+        <p>You consent to receive account communications, notices, and statements electronically.</p>
+        <h4>6. Fees</h4>
+        <p>Any applicable fees will be disclosed to you before they are charged. You authorize the bank to deduct disclosed fees from your account.</p>
+        <h4>7. Privacy</h4>
+        <p>Your personal information is collected and used for the operation of your account and as required by law. It is not sold to third parties.</p>
+        <h4>8. Errors and unauthorized activity</h4>
+        <p>Notify the bank promptly if you notice an error or suspect unauthorized activity on your account so it can be investigated.</p>
+        <h4>9. Amendments</h4>
+        <p>The bank may amend this agreement with reasonable notice. Continued use of your account after amendments take effect constitutes acceptance.</p>
+        <h4>10. Account closure</h4>
+        <p>You may request closure of your account at any time. The bank may close an account in accordance with this agreement and applicable law.</p>
+      </div>
+      <label class="agree-check">
+        <input type="checkbox" id="agree-box">
+        <span>I have read and agree to the Alora Bank Account Agreement.</span>
+      </label>
+      <div class="form-error" id="agree-error"></div>
+      <div class="action-row" style="margin-top:14px;">
+        <button class="btn" id="btn-accept">Accept &amp; Open Account</button>
+        <button class="btn btn-ghost" id="btn-decline">Decline</button>
+      </div>
+    </div>
     <div id="open-success" class="hidden" style="text-align:center; padding: 12px 0;">
       <h2 style="margin-bottom:8px;">Account opened</h2>
       <p class="sub" style="margin-bottom:6px;">Your account number</p>
@@ -124,6 +161,42 @@
     if (v.password.length < 6) { errBox.textContent = 'Password must be at least 6 characters.'; return; }
     if (v.password !== v.password2) { errBox.textContent = 'Passwords do not match.'; return; }
 
+    // Details confirmed — show the agreement before anything is created.
+    pendingSignup = v;
+    form.classList.add('hidden');
+    document.getElementById('agreement').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  });
+
+  var pendingSignup = null;
+
+  document.getElementById('btn-decline').addEventListener('click', function () {
+    pendingSignup = null;
+    document.getElementById('agree-box').checked = false;
+    document.getElementById('agree-error').textContent = '';
+    document.getElementById('agreement').classList.add('hidden');
+    form.classList.remove('hidden');
+    window.scrollTo(0, 0);
+  });
+
+  document.getElementById('btn-accept').addEventListener('click', async function () {
+    var agreeErr = document.getElementById('agree-error');
+    agreeErr.textContent = '';
+    if (!document.getElementById('agree-box').checked) {
+      agreeErr.textContent = 'Please accept the agreement to open your account.';
+      return;
+    }
+    var v = pendingSignup;
+    if (!v) return;
+    var acceptBtn = document.getElementById('btn-accept');
+    acceptBtn.disabled = true;
+    acceptBtn.textContent = 'Opening your account…';
+    await doSignup(v);
+    acceptBtn.disabled = false;
+    acceptBtn.textContent = 'Accept & Open Account';
+  });
+
+  async function doSignup(v) {
     btn.disabled = true;
     btn.textContent = 'Opening your account…';
 
@@ -161,6 +234,7 @@
       // 5. Show the confirmation screen, then continue to sign in.
       // (The account record is kept on the admin console.)
       document.getElementById('open-form').classList.add('hidden');
+      document.getElementById('agreement').classList.add('hidden');
       document.getElementById('success-acctno').textContent = acctNo;
       document.getElementById('open-success').classList.remove('hidden');
       document.getElementById('btn-goto-login').addEventListener('click', function () {
@@ -176,7 +250,7 @@
     } catch (err) {
       fail('Something went wrong. Please try again.');
     }
-  });
+  }
 })();
 </script>
 </body>
