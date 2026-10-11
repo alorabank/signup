@@ -24,6 +24,35 @@ window.Alora = (function () {
     return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function genReference() {
+    var d = '';
+    for (var i = 0; i < 9; i++) d += Math.floor(Math.random() * 10);
+    return 'ALB' + d;
+  }
+
+  // Bank-style receipt popup. Requires #confirm-backdrop markup on the page.
+  // o: { status: 'success'|'pending', amount, from, to, reference, date }
+  function showReceipt(o) {
+    var bd = document.getElementById('confirm-backdrop');
+    if (!bd) return;
+    var ok = o.status === 'success';
+    var icon = document.getElementById('confirm-icon');
+    icon.className = 'confirm-icon ' + (ok ? 'ok' : 'pending');
+    icon.innerHTML = ok
+      ? '<svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>';
+    document.getElementById('confirm-title').textContent = ok ? 'Transaction Successful' : 'Transaction Pending';
+    document.getElementById('confirm-sub').textContent = ok ? '' : 'Awaiting admin approval.';
+    document.getElementById('confirm-amount').textContent = money(o.amount);
+    var rows = [['From', o.from], ['To', o.to], ['Reference', o.reference], ['Date', o.date]];
+    document.getElementById('confirm-details').innerHTML = rows.map(function (r) {
+      return '<div class="row"><span>' + r[0] + '</span><strong>' + escapeHtml(r[1]) + '</strong></div>';
+    }).join('');
+    document.getElementById('confirm-done').onclick = function () { bd.classList.add('hidden'); };
+    document.getElementById('confirm-x').onclick = function () { bd.classList.add('hidden'); };
+    bd.classList.remove('hidden');
+  }
+
   function todayStr() {
     return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
@@ -96,6 +125,8 @@ window.Alora = (function () {
 
   return {
     money: money,
+    genReference: genReference,
+    showReceipt: showReceipt,
     todayStr: todayStr,
     genAccountNumber: genAccountNumber,
     genRoutingNumber: genRoutingNumber,
