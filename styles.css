@@ -567,3 +567,21 @@ body.chase-bg { background: #071a38; }
 .stat-card .value { font-family: var(--serif); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; position: relative; }
 .stat-card .value small { font-size: 20px; color: var(--gold-soft); }
 .stat-card .plan { font-size: 13px; color: rgba(255, 255, 255, 0.62); margin-top: 8px; position: relative; }
+
+/* ---------- transaction receipt popup ---------- */
+.confirm-modal { background: #fff; border-radius: 20px; max-width: 430px; width: calc(100% - 32px); overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
+.confirm-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 26px; font-size: 20px; font-weight: 700; color: var(--navy); border-bottom: 1px solid #f0f1f3; }
+.confirm-x { background: none; border: none; font-size: 24px; line-height: 1; color: #9a9a9a; cursor: pointer; padding: 4px; }
+.confirm-body { padding: 30px 28px 28px; text-align: center; }
+.confirm-icon { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+.confirm-icon.ok { background: #e4f6ec; color: #0e9f5d; }
+.confirm-icon.pending { background: #fdf1de; color: #d9941e; }
+.confirm-title { font-size: 22px; font-weight: 800; color: var(--navy); }
+.confirm-sub { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
+.confirm-amount { font-size: 36px; font-weight: 800; color: var(--navy); margin: 12px 0 22px; font-variant-numeric: tabular-nums; }
+.confirm-details { background: #f6f7f9; border-radius: 14px; padding: 14px 20px; text-align: left; }
+.confirm-details .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; font-size: 15px; }
+.confirm-details .row span { color: #7a7a7a; flex-shrink: 0; }
+.confirm-details .row strong { font-weight: 700; color: var(--navy); text-align: right; word-break: break-word; }
+.confirm-done { width: 100%; background: #0e9f5d; color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 17px; font-weight: 700; margin-top: 22px; cursor: pointer; }
+.confirm-done:active { transform: scale(.99); }
