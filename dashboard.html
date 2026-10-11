@@ -143,6 +143,21 @@
   </div>
 </div>
 
+
+<div class="modal-backdrop hidden" id="confirm-backdrop">
+  <div class="confirm-modal">
+    <div class="confirm-head">Confirmation<button class="confirm-x" id="confirm-x">&times;</button></div>
+    <div class="confirm-body">
+      <div class="confirm-icon ok" id="confirm-icon"></div>
+      <div class="confirm-title" id="confirm-title"></div>
+      <div class="confirm-sub" id="confirm-sub"></div>
+      <div class="confirm-amount" id="confirm-amount"></div>
+      <div class="confirm-details" id="confirm-details"></div>
+      <button class="confirm-done" id="confirm-done">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop hidden" id="money-backdrop">
   <div class="modal">
     <h3 id="money-title">Deposit</h3>
@@ -381,6 +396,13 @@
     ]);
     closeMoney();
     loadAll();
+    Alora.showReceipt({
+      status: 'success', amount: amt,
+      from: from.type + ' ••' + String(from.number).slice(-4),
+      to: to.type + ' ••' + String(to.number).slice(-4),
+      reference: Alora.genReference(),
+      date: new Date().toLocaleDateString('en-US')
+    });
   }
 
   async function doRequest() {
@@ -419,16 +441,33 @@
       var acct = accounts.find(function (a) { return a.id === accountId; });
       if (acct && Number(acct.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
     }
+    var acct = accounts.find(function (a) { return a.id === accountId; });
+    var acctLabel = acct ? (acct.type + ' ••' + String(acct.number).slice(-4)) : 'Account';
+    var rFrom = acctLabel, rTo = acctLabel;
+    if (meta.kind === 'deposit') { rFrom = 'External deposit'; rTo = acctLabel; }
+    else if (meta.kind === 'billpay') { rTo = details; }
+    else if (meta.kind === 'withdrawal') {
+      if (details && details.indexOf('BANK::') === 0) {
+        var bp = details.split('::');
+        rTo = bp[1] + ' ••' + String(bp[2]).slice(-4);
+      } else if (details && details.indexOf('ALORA::') === 0) {
+        var rp = details.split('::');
+        rTo = rp[1].indexOf('@') !== -1 ? rp[1] : ('Acct ••' + String(rp[1]).slice(-4));
+      }
+    }
+    var ref = Alora.genReference();
     msg.textContent = 'Sending…';
     var ins = await supa.from('money_requests').insert({
       account_id: accountId, owner_id: s.data.session.user.id,
-      kind: meta.kind, amount: Math.round(amt * 100) / 100, details: details
+      kind: meta.kind, amount: Math.round(amt * 100) / 100, details: details, reference: ref
     });
     if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
-    msg.textContent = 'Sent for approval.';
-    msg.classList.add('ok');
+    closeMoney();
     loadRequests();
-    setTimeout(closeMoney, 900);
+    Alora.showReceipt({
+      status: 'pending', amount: amt, from: rFrom, to: rTo,
+      reference: ref, date: new Date().toLocaleDateString('en-US')
+    });
   }
 
   document.querySelectorAll('[data-action]').forEach(function (btn) {
