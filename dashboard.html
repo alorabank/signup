@@ -52,6 +52,57 @@
         </div>
       </div>
     </div>
+  <div class="panel" style="margin-bottom:20px;">
+    <h3>Move money <span class="sub">deposits, withdrawals and bill payments need approval</span></h3>
+    <div class="money-forms-3">
+      <div class="money-box">
+        <h4>Deposit</h4>
+        <div class="field">
+          <label for="d-account">To account</label>
+          <select id="d-account"></select>
+        </div>
+        <div class="field">
+          <label for="d-amount">Amount (USD)</label>
+          <input id="d-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+        <button class="btn btn-sm" id="btn-deposit">Request deposit</button>
+        <div class="money-msg" id="d-msg"></div>
+      </div>
+      <div class="money-box">
+        <h4>Withdraw</h4>
+        <div class="field">
+          <label for="w-account">From account</label>
+          <select id="w-account"></select>
+        </div>
+        <div class="field">
+          <label for="w-amount">Amount (USD)</label>
+          <input id="w-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+        <button class="btn btn-sm" id="btn-withdraw">Request withdrawal</button>
+        <div class="money-msg" id="w-msg"></div>
+      </div>
+      <div class="money-box">
+        <h4>Bill pay</h4>
+        <div class="field">
+          <label for="b-account">From account</label>
+          <select id="b-account"></select>
+        </div>
+        <div class="field">
+          <label for="b-payee">Payee</label>
+          <input id="b-payee" type="text" placeholder="Electric company">
+        </div>
+        <div class="field">
+          <label for="b-amount">Amount (USD)</label>
+          <input id="b-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+        <button class="btn btn-sm" id="btn-billpay">Request payment</button>
+        <div class="money-msg" id="b-msg"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:20px;">
+    <h3>My requests <span class="sub">approval status</span></h3>
+    <ul class="tx-list" id="req-list"></ul>
   </div>
 </div>
 <script src="supa.js"></script>
@@ -130,7 +181,84 @@
       to.appendChild(o1.cloneNode(true));
     });
     if (accounts.length > 1) to.selectedIndex = 1;
+
+    ['d-account', 'w-account', 'b-account'].forEach(function (id) {
+      var sel = document.getElementById(id);
+      sel.innerHTML = '';
+      accounts.forEach(function (a) {
+        var o = document.createElement('option');
+        o.value = a.id; o.textContent = a.type + ' •••• ' + a.number.slice(-4);
+        sel.appendChild(o);
+      });
+    });
+
+    loadRequests();
   }
+
+  async function loadRequests() {
+    var s = await supa.auth.getSession();
+    if (!s.data.session) return;
+    var r = await supa.from('money_requests').select('*')
+      .eq('owner_id', s.data.session.user.id)
+      .order('created_at', { ascending: false }).limit(20);
+    var list = document.getElementById('req-list');
+    list.innerHTML = '';
+    var rows = r.data || [];
+    if (!rows.length) {
+      list.innerHTML = '<div class="tx-empty">No requests yet.</div>';
+      return;
+    }
+    var labels = { deposit: 'Deposit', withdrawal: 'Withdrawal', billpay: 'Bill payment' };
+    rows.forEach(function (q) {
+      var acct = accounts.find(function (x) { return x.id === q.account_id; });
+      var pill = q.status === 'pending' ? 'status-review'
+        : q.status === 'approved' ? 'status-active' : 'status-suspended';
+      var li = document.createElement('li');
+      li.innerHTML = '<div><div>' + labels[q.kind] + ' — ' + Alora.money(q.amount) +
+        (q.details ? ' · ' + Alora.escapeHtml(q.details) : '') + '</div>' +
+        '<div class="tx-meta">' + (acct ? Alora.escapeHtml(acct.type) + ' •••• ' + Alora.escapeHtml(acct.number.slice(-4)) + ' · ' : '') +
+        fmtDate(q.created_at) + '</div></div>' +
+        '<span class="status-pill ' + pill + '">' + q.status + '</span>';
+      list.appendChild(li);
+    });
+  }
+
+  async function submitRequest(kind, accountSelId, amountId, detailsId, msgId) {
+    var msg = document.getElementById(msgId);
+    msg.textContent = ''; msg.className = 'money-msg';
+    var s = await supa.auth.getSession();
+    var accountId = document.getElementById(accountSelId).value;
+    var amt = Number(document.getElementById(amountId).value);
+    var details = detailsId ? document.getElementById(detailsId).value.trim() : null;
+    if (!accountId) { msg.textContent = 'No account available.'; msg.classList.add('err'); return; }
+    if (!(amt > 0)) { msg.textContent = 'Enter an amount greater than zero.'; msg.classList.add('err'); return; }
+    if (detailsId && !details) { msg.textContent = 'Enter a payee.'; msg.classList.add('err'); return; }
+    if (kind !== 'deposit') {
+      var acct = accounts.find(function (a) { return a.id === accountId; });
+      if (acct && Number(acct.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
+    }
+    msg.textContent = 'Sending…';
+    var ins = await supa.from('money_requests').insert({
+      account_id: accountId, owner_id: s.data.session.user.id,
+      kind: kind, amount: Math.round(amt * 100) / 100, details: details
+    });
+    if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
+    document.getElementById(amountId).value = '';
+    if (detailsId) document.getElementById(detailsId).value = '';
+    msg.textContent = 'Sent for approval.';
+    msg.classList.add('ok');
+    loadRequests();
+  }
+
+  document.getElementById('btn-deposit').addEventListener('click', function () {
+    submitRequest('deposit', 'd-account', 'd-amount', null, 'd-msg');
+  });
+  document.getElementById('btn-withdraw').addEventListener('click', function () {
+    submitRequest('withdrawal', 'w-account', 'w-amount', null, 'w-msg');
+  });
+  document.getElementById('btn-billpay').addEventListener('click', function () {
+    submitRequest('billpay', 'b-account', 'b-amount', 'b-payee', 'b-msg');
+  });
 
   document.getElementById('btn-transfer').addEventListener('click', async function () {
     var msg = document.getElementById('t-msg');
@@ -168,6 +296,14 @@
   // Live updates: when the admin (or anyone) changes a balance, refresh.
   supa.channel('balances')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, function () { loadAll(); })
+    .subscribe();
+
+  // Live updates: approval decisions refresh the request list (and balances).
+  supa.channel('my-requests')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'money_requests' }, function () {
+      loadRequests();
+      loadAll();
+    })
     .subscribe();
 
   loadAll();

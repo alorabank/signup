@@ -24,6 +24,26 @@
     <div class="value" id="admin-total"><small>$</small>0.00</div>
     <div class="plan" id="admin-count"></div>
   </div>
+  <div class="panel" style="margin-bottom:20px;">
+    <h3>Pending approvals <span class="sub" id="appr-sub"></span></h3>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Type</th>
+            <th>Account</th>
+            <th>Amount (USD)</th>
+            <th>Details</th>
+            <th>Requested</th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="appr-tbody"></tbody>
+      </table>
+    </div>
+  </div>
   <div class="panel">
     <h3>Accounts <span class="sub" id="admin-sub"></span></h3>
     <div class="admin-table-wrap">
@@ -170,12 +190,104 @@
     });
   }
 
+  var apprCache = [];
+
+  async function renderApprovals() {
+    var q = await supa.from('money_requests').select('*').eq('status', 'pending').order('created_at', { ascending: true });
+    var rows = q.data || [];
+    apprCache = rows;
+    var tb = document.getElementById('appr-tbody');
+    tb.innerHTML = '';
+    document.getElementById('appr-sub').textContent = rows.length ? rows.length + ' awaiting decision' : 'none pending';
+    if (!rows.length) {
+      tb.innerHTML = '<tr><td colspan="8" style="color:var(--muted);">No pending requests.</td></tr>';
+      return;
+    }
+    var profs = await supa.from('profiles').select('id, full_name').eq('is_admin', false);
+    var accts = await supa.from('accounts').select('id, type, number, balance');
+    var names = {}, acctInfo = {};
+    (profs.data || []).forEach(function (u) { names[u.id] = u.full_name; });
+    (accts.data || []).forEach(function (a) { acctInfo[a.id] = a; });
+    var labels = { deposit: 'Deposit', withdrawal: 'Withdrawal', billpay: 'Bill payment' };
+    rows.forEach(function (r) {
+      var a = acctInfo[r.account_id] || {};
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + Alora.escapeHtml(names[r.owner_id] || '—') + '</td>' +
+        '<td>' + labels[r.kind] + '</td>' +
+        '<td>' + Alora.escapeHtml(a.type || '—') + ' •••• ' + Alora.escapeHtml((a.number || '').slice(-4)) + '</td>' +
+        '<td><strong>' + Alora.money(r.amount) + '</strong></td>' +
+        '<td>' + Alora.escapeHtml(r.details || '—') + '</td>' +
+        '<td>' + new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</td>' +
+        '<td><button class="btn btn-sm" data-approve="' + r.id + '">Approve</button></td>' +
+        '<td><button class="btn btn-sm btn-ghost" data-reject="' + r.id + '">Reject</button></td>';
+      tb.appendChild(tr);
+    });
+
+    tb.querySelectorAll('button[data-approve]').forEach(function (btn) {
+      btn.addEventListener('click', function () { decide(btn.getAttribute('data-approve'), true, btn); });
+    });
+    tb.querySelectorAll('button[data-reject]').forEach(function (btn) {
+      btn.addEventListener('click', function () { decide(btn.getAttribute('data-reject'), false, btn); });
+    });
+  }
+
+  async function decide(id, approve, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      var rq = apprCache.find(function (x) { return x.id === id; });
+      if (!rq) { renderApprovals(); return; }
+      if (!approve) {
+        await supa.from('money_requests').update({ status: 'rejected' }).eq('id', id).eq('status', 'pending');
+        renderApprovals();
+        return;
+      }
+      // Re-read the account to get the fresh balance.
+      var ac = await supa.from('accounts').select('balance, type').eq('id', rq.account_id).single();
+      if (ac.error || !ac.data) { btn.textContent = 'Error'; btn.disabled = false; return; }
+      var bal = Number(ac.data.balance);
+      var amt = Number(rq.amount);
+      var signed = rq.kind === 'deposit' ? amt : -amt;
+      if (signed < 0 && bal < amt) {
+        btn.textContent = 'Insufficient';
+        setTimeout(function () { btn.textContent = 'Approve'; btn.disabled = false; }, 1500);
+        return;
+      }
+      // Claim the request first (only if still pending — prevents double-apply).
+      var claim = await supa.from('money_requests').update({ status: 'approved' }).eq('id', id).eq('status', 'pending').select();
+      if (!claim.data || !claim.data.length) { renderApprovals(); return; }
+      var nb = Math.round((bal + signed) * 100) / 100;
+      await supa.from('accounts').update({ balance: nb }).eq('id', rq.account_id);
+      var desc = rq.kind === 'deposit' ? 'Deposit approved'
+        : rq.kind === 'withdrawal' ? 'Withdrawal approved'
+        : 'Bill payment approved' + (rq.details ? ' — ' + rq.details : '');
+      await supa.from('transactions').insert({ account_id: rq.account_id, description: desc, amount: signed });
+      renderApprovals();
+      render();
+    } catch (e) {
+      btn.textContent = 'Error';
+      btn.disabled = false;
+    }
+  }
+
   document.getElementById('btn-logout').addEventListener('click', async function () {
     await supa.auth.signOut();
     window.location.href = 'login.html';
   });
 
-  guard().then(function (ok) { if (ok) render(); });
+  guard().then(function (ok) {
+    if (!ok) return;
+    render();
+    renderApprovals();
+    // Live: new requests appear without refresh.
+    supa.channel('approvals')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'money_requests' }, function () {
+        renderApprovals();
+        render();
+      })
+      .subscribe();
+  });
 })();
 </script>
 </body>

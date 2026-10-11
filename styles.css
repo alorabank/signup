@@ -167,6 +167,8 @@ img.brand-mark {
 .tx-empty { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
 .money-forms { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.money-forms-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 860px) { .money-forms-3 { grid-template-columns: 1fr; } }
 .money-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
 .money-box h4 { font-size: 13px; margin-bottom: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
 .money-box .row { display: flex; gap: 8px; }
@@ -199,6 +201,7 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 .status-active { background: rgba(18, 128, 92, 0.12); color: var(--green); }
 .status-review { background: rgba(184, 145, 47, 0.15); color: var(--gold-dim); }
+.status-suspended { background: rgba(217, 45, 32, 0.1); color: var(--red); }
 
 /* ---------- form page ---------- */
 .form-card {
