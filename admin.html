@@ -54,6 +54,29 @@
       </table>
     </div>
   </div>
+  <div class="panel" style="margin-bottom:20px;">
+    <h3>Login activity <span class="sub" id="login-sub"></span></h3>
+    <div style="margin-bottom:12px;">
+      <button class="btn btn-sm btn-ghost" id="la-filter-all">All</button>
+      <button class="btn btn-sm btn-ghost" id="la-filter-failed">Failed only</button>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Email</th>
+            <th>Device</th>
+            <th>Location</th>
+            <th>IP</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="login-tbody"></tbody>
+      </table>
+    </div>
+  </div>
   <div class="panel">
     <h3>Accounts <span class="sub" id="admin-sub"></span></h3>
     <div class="admin-table-wrap">
@@ -328,15 +351,61 @@
     window.location.href = 'login.html';
   });
 
+  var laFailedOnly = false;
+  var laRows = [];
+
+  function fmtTime(iso) {
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  async function renderLoginActivity() {
+    var r = await supa.from('login_activity').select('*').order('logged_in_at', { ascending: false }).limit(60);
+    laRows = r.data || [];
+    paintLoginActivity();
+  }
+
+  function paintLoginActivity() {
+    var tb = document.getElementById('login-tbody');
+    tb.innerHTML = '';
+    var rows = laFailedOnly ? laRows.filter(function (x) { return !x.success; }) : laRows;
+    document.getElementById('login-sub').textContent = rows.length ? '· ' + rows.length + ' recent' : '';
+    if (!rows.length) {
+      tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted);">No login activity yet.</td></tr>';
+      return;
+    }
+    rows.forEach(function (x) {
+      var tr = document.createElement('tr');
+      var pill = x.success ? 'status-active' : 'status-suspended';
+      tr.innerHTML =
+        '<td style="white-space:nowrap;">' + fmtTime(x.logged_in_at) + '</td>' +
+        '<td>' + Alora.escapeHtml(x.full_name || '—') + '</td>' +
+        '<td>' + Alora.escapeHtml(x.email) + '</td>' +
+        '<td>' + Alora.escapeHtml(x.device || '—') + '</td>' +
+        '<td>' + Alora.escapeHtml(x.location || '—') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums;">' + Alora.escapeHtml(x.ip_address || '—') + '</td>' +
+        '<td><span class="status-pill ' + pill + '">' + (x.success ? 'success' : 'failed') + '</span></td>';
+      tb.appendChild(tr);
+    });
+  }
+
+  document.getElementById('la-filter-all').addEventListener('click', function () { laFailedOnly = false; paintLoginActivity(); });
+  document.getElementById('la-filter-failed').addEventListener('click', function () { laFailedOnly = true; paintLoginActivity(); });
+
   guard().then(function (ok) {
     if (!ok) return;
     render();
     renderApprovals();
+    renderLoginActivity();
     // Live: new requests appear without refresh.
     supa.channel('approvals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'money_requests' }, function () {
         renderApprovals();
         render();
+      })
+      .subscribe();
+    supa.channel('logins')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'login_activity' }, function () {
+        renderLoginActivity();
       })
       .subscribe();
   });
