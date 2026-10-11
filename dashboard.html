@@ -25,6 +25,7 @@
     <button class="btn" data-action="withdraw">Withdraw</button>
     <button class="btn" data-action="transfer">Transfer</button>
     <button class="btn" data-action="billpay">Bill Pay</button>
+    <button class="btn" data-action="invest">Investments</button>
   </div>
   <div class="panel" style="margin-bottom:20px;">
     <h3>Recent transactions</h3>
@@ -255,7 +256,11 @@
   }
 
   document.querySelectorAll('[data-action]').forEach(function (btn) {
-    btn.addEventListener('click', function () { openMoney(btn.getAttribute('data-action')); });
+    btn.addEventListener('click', function () {
+      var a = btn.getAttribute('data-action');
+      if (a === 'invest') { window.location.href = 'invest.html'; return; }
+      openMoney(a);
+    });
   });
   document.getElementById('money-close').addEventListener('click', closeMoney);
   document.getElementById('money-backdrop').addEventListener('click', function (e) {
