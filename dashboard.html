@@ -24,85 +24,33 @@
     <div class="value" id="hero-balance"><small>$</small>0.00</div>
     <div class="plan" id="hero-sub">—</div>
   </div>
+  <div class="action-row" style="margin: 4px 0 20px;">
+    <button class="btn" data-action="deposit">Deposit</button>
+    <button class="btn" data-action="withdraw">Withdraw</button>
+    <button class="btn" data-action="transfer">Transfer</button>
+    <button class="btn" data-action="billpay">Bill Pay</button>
+  </div>
   <div class="cards" id="account-cards"></div>
-  <div class="grid-2">
-    <div class="panel">
-      <h3>Recent transactions</h3>
-      <ul class="tx-list" id="tx-list"></ul>
-    </div>
-    <div class="panel">
-      <h3>Transfer funds</h3>
-      <div class="money-forms">
-        <div class="money-box">
-          <h4>Between my accounts</h4>
-          <div class="field">
-            <label for="t-from">From</label>
-            <select id="t-from"></select>
-          </div>
-          <div class="field">
-            <label for="t-to">To</label>
-            <select id="t-to"></select>
-          </div>
-          <div class="field">
-            <label for="t-amount">Amount (USD)</label>
-            <input id="t-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
-          </div>
-          <button class="btn btn-sm" id="btn-transfer">Transfer</button>
-          <div class="money-msg" id="t-msg"></div>
-        </div>
-      </div>
-    </div>
   <div class="panel" style="margin-bottom:20px;">
-    <h3>Move money <span class="sub">deposits, withdrawals and bill payments need approval</span></h3>
-    <div class="money-forms-3">
-      <div class="money-box">
-        <h4>Deposit</h4>
-        <div class="field">
-          <label for="d-account">To account</label>
-          <select id="d-account"></select>
-        </div>
-        <div class="field">
-          <label for="d-amount">Amount (USD)</label>
-          <input id="d-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
-        </div>
-        <button class="btn btn-sm" id="btn-deposit">Request deposit</button>
-        <div class="money-msg" id="d-msg"></div>
-      </div>
-      <div class="money-box">
-        <h4>Withdraw</h4>
-        <div class="field">
-          <label for="w-account">From account</label>
-          <select id="w-account"></select>
-        </div>
-        <div class="field">
-          <label for="w-amount">Amount (USD)</label>
-          <input id="w-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
-        </div>
-        <button class="btn btn-sm" id="btn-withdraw">Request withdrawal</button>
-        <div class="money-msg" id="w-msg"></div>
-      </div>
-      <div class="money-box">
-        <h4>Bill pay</h4>
-        <div class="field">
-          <label for="b-account">From account</label>
-          <select id="b-account"></select>
-        </div>
-        <div class="field">
-          <label for="b-payee">Payee</label>
-          <input id="b-payee" type="text" placeholder="Electric company">
-        </div>
-        <div class="field">
-          <label for="b-amount">Amount (USD)</label>
-          <input id="b-amount" type="number" min="0.01" step="0.01" placeholder="0.00">
-        </div>
-        <button class="btn btn-sm" id="btn-billpay">Request payment</button>
-        <div class="money-msg" id="b-msg"></div>
-      </div>
-    </div>
+    <h3>Recent transactions</h3>
+    <ul class="tx-list" id="tx-list"></ul>
   </div>
   <div class="panel" style="margin-bottom:20px;">
     <h3>My requests <span class="sub">approval status</span></h3>
     <ul class="tx-list" id="req-list"></ul>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="money-backdrop">
+  <div class="modal">
+    <h3 id="money-title">Deposit</h3>
+    <div class="rec-sub" id="money-sub"></div>
+    <div id="money-fields"></div>
+    <div class="money-msg" id="money-msg"></div>
+    <div class="actions">
+      <button class="btn" id="money-submit">Submit</button>
+      <button class="btn btn-ghost" id="money-close">Cancel</button>
+    </div>
   </div>
 </div>
 <script src="supa.js"></script>
@@ -171,27 +119,6 @@
       });
     }
 
-    var from = document.getElementById('t-from');
-    var to = document.getElementById('t-to');
-    from.innerHTML = ''; to.innerHTML = '';
-    accounts.forEach(function (a, i) {
-      var o1 = document.createElement('option');
-      o1.value = a.id; o1.textContent = a.type + ' •••• ' + a.number.slice(-4);
-      from.appendChild(o1);
-      to.appendChild(o1.cloneNode(true));
-    });
-    if (accounts.length > 1) to.selectedIndex = 1;
-
-    ['d-account', 'w-account', 'b-account'].forEach(function (id) {
-      var sel = document.getElementById(id);
-      sel.innerHTML = '';
-      accounts.forEach(function (a) {
-        var o = document.createElement('option');
-        o.value = a.id; o.textContent = a.type + ' •••• ' + a.number.slice(-4);
-        sel.appendChild(o);
-      });
-    });
-
     loadRequests();
   }
 
@@ -223,56 +150,66 @@
     });
   }
 
-  async function submitRequest(kind, accountSelId, amountId, detailsId, msgId) {
-    var msg = document.getElementById(msgId);
-    msg.textContent = ''; msg.className = 'money-msg';
-    var s = await supa.auth.getSession();
-    var accountId = document.getElementById(accountSelId).value;
-    var amt = Number(document.getElementById(amountId).value);
-    var details = detailsId ? document.getElementById(detailsId).value.trim() : null;
-    if (!accountId) { msg.textContent = 'No account available.'; msg.classList.add('err'); return; }
-    if (!(amt > 0)) { msg.textContent = 'Enter an amount greater than zero.'; msg.classList.add('err'); return; }
-    if (detailsId && !details) { msg.textContent = 'Enter a payee.'; msg.classList.add('err'); return; }
-    if (kind !== 'deposit') {
-      var acct = accounts.find(function (a) { return a.id === accountId; });
-      if (acct && Number(acct.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
-    }
-    msg.textContent = 'Sending…';
-    var ins = await supa.from('money_requests').insert({
-      account_id: accountId, owner_id: s.data.session.user.id,
-      kind: kind, amount: Math.round(amt * 100) / 100, details: details
+  var moneyAction = null;
+
+  function acctOptions(sel, selectedIdx) {
+    sel.innerHTML = '';
+    accounts.forEach(function (a) {
+      var o = document.createElement('option');
+      o.value = a.id; o.textContent = a.type + ' •••• ' + a.number.slice(-4);
+      sel.appendChild(o);
     });
-    if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
-    document.getElementById(amountId).value = '';
-    if (detailsId) document.getElementById(detailsId).value = '';
-    msg.textContent = 'Sent for approval.';
-    msg.classList.add('ok');
-    loadRequests();
+    if (typeof selectedIdx === 'number' && sel.options.length > selectedIdx) sel.selectedIndex = selectedIdx;
   }
 
-  document.getElementById('btn-deposit').addEventListener('click', function () {
-    submitRequest('deposit', 'd-account', 'd-amount', null, 'd-msg');
-  });
-  document.getElementById('btn-withdraw').addEventListener('click', function () {
-    submitRequest('withdrawal', 'w-account', 'w-amount', null, 'w-msg');
-  });
-  document.getElementById('btn-billpay').addEventListener('click', function () {
-    submitRequest('billpay', 'b-account', 'b-amount', 'b-payee', 'b-msg');
-  });
+  var ACTION_META = {
+    deposit:  { title: 'Deposit',        sub: 'Needs approval before it takes effect.', kind: 'deposit' },
+    withdraw: { title: 'Withdraw',       sub: 'Needs approval before it takes effect.', kind: 'withdrawal' },
+    transfer: { title: 'Transfer',       sub: 'Instant — moves between your accounts.',  kind: 'transfer' },
+    billpay:  { title: 'Bill Pay',       sub: 'Needs approval before it takes effect.', kind: 'billpay' }
+  };
 
-  document.getElementById('btn-transfer').addEventListener('click', async function () {
-    var msg = document.getElementById('t-msg');
+  function openMoney(action) {
+    moneyAction = action;
+    var meta = ACTION_META[action];
+    document.getElementById('money-title').textContent = meta.title;
+    document.getElementById('money-sub').textContent = meta.sub;
+    document.getElementById('money-submit').textContent = action === 'transfer' ? 'Transfer' : 'Submit request';
+    var f = document.getElementById('money-fields');
+    var acctLabel = action === 'deposit' ? 'To account' : 'From account';
+    var html = '<div class="field"><label for="m-account">' + acctLabel + '</label><select id="m-account"></select></div>';
+    if (action === 'transfer') {
+      html += '<div class="field"><label for="m-to">To account</label><select id="m-to"></select></div>';
+    }
+    if (action === 'billpay') {
+      html += '<div class="field"><label for="m-payee">Payee</label><input id="m-payee" type="text" placeholder="Electric company"></div>';
+    }
+    html += '<div class="field"><label for="m-amount">Amount (USD)</label><input id="m-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>';
+    f.innerHTML = html;
+    acctOptions(document.getElementById('m-account'), 0);
+    if (action === 'transfer') acctOptions(document.getElementById('m-to'), accounts.length > 1 ? 1 : 0);
+    var msg = document.getElementById('money-msg');
     msg.textContent = ''; msg.className = 'money-msg';
-    var fromId = document.getElementById('t-from').value;
-    var toId = document.getElementById('t-to').value;
-    var amt = Number(document.getElementById('t-amount').value);
+    document.getElementById('money-backdrop').classList.remove('hidden');
+    setTimeout(function () { document.getElementById('m-amount').focus(); }, 50);
+  }
+
+  function closeMoney() {
+    document.getElementById('money-backdrop').classList.add('hidden');
+    moneyAction = null;
+  }
+
+  async function doTransfer() {
+    var msg = document.getElementById('money-msg');
+    var fromId = document.getElementById('m-account').value;
+    var toId = document.getElementById('m-to').value;
+    var amt = Number(document.getElementById('m-amount').value);
     if (!fromId || !toId || fromId === toId) { msg.textContent = 'Choose two different accounts.'; msg.classList.add('err'); return; }
     if (!(amt > 0)) { msg.textContent = 'Enter an amount greater than zero.'; msg.classList.add('err'); return; }
     var from = accounts.find(function (a) { return a.id === fromId; });
     var to = accounts.find(function (a) { return a.id === toId; });
     if (Number(from.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
-
-    msg.textContent = 'Processing…';
+    msg.textContent = 'Processing…'; msg.className = 'money-msg';
     var nb1 = Math.round((Number(from.balance) - amt) * 100) / 100;
     var nb2 = Math.round((Number(to.balance) + amt) * 100) / 100;
     var u1 = await supa.from('accounts').update({ balance: nb1 }).eq('id', fromId);
@@ -282,10 +219,47 @@
       { account_id: fromId, description: 'Transfer to ' + to.type, amount: -amt },
       { account_id: toId, description: 'Transfer from ' + from.type, amount: amt }
     ]);
-    document.getElementById('t-amount').value = '';
-    msg.textContent = 'Transfer complete.';
-    msg.classList.add('ok');
+    closeMoney();
     loadAll();
+  }
+
+  async function doRequest() {
+    var msg = document.getElementById('money-msg');
+    msg.textContent = ''; msg.className = 'money-msg';
+    var meta = ACTION_META[moneyAction];
+    var s = await supa.auth.getSession();
+    var accountId = document.getElementById('m-account').value;
+    var amt = Number(document.getElementById('m-amount').value);
+    var payeeEl = document.getElementById('m-payee');
+    var details = payeeEl ? payeeEl.value.trim() : null;
+    if (!accountId) { msg.textContent = 'No account available.'; msg.classList.add('err'); return; }
+    if (!(amt > 0)) { msg.textContent = 'Enter an amount greater than zero.'; msg.classList.add('err'); return; }
+    if (payeeEl && !details) { msg.textContent = 'Enter a payee.'; msg.classList.add('err'); return; }
+    if (meta.kind !== 'deposit') {
+      var acct = accounts.find(function (a) { return a.id === accountId; });
+      if (acct && Number(acct.balance) < amt) { msg.textContent = 'Insufficient funds.'; msg.classList.add('err'); return; }
+    }
+    msg.textContent = 'Sending…';
+    var ins = await supa.from('money_requests').insert({
+      account_id: accountId, owner_id: s.data.session.user.id,
+      kind: meta.kind, amount: Math.round(amt * 100) / 100, details: details
+    });
+    if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
+    msg.textContent = 'Sent for approval.';
+    msg.classList.add('ok');
+    loadRequests();
+    setTimeout(closeMoney, 900);
+  }
+
+  document.querySelectorAll('[data-action]').forEach(function (btn) {
+    btn.addEventListener('click', function () { openMoney(btn.getAttribute('data-action')); });
+  });
+  document.getElementById('money-close').addEventListener('click', closeMoney);
+  document.getElementById('money-backdrop').addEventListener('click', function (e) {
+    if (e.target === this) closeMoney();
+  });
+  document.getElementById('money-submit').addEventListener('click', function () {
+    if (moneyAction === 'transfer') doTransfer(); else doRequest();
   });
 
   document.getElementById('btn-logout').addEventListener('click', async function () {

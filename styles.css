@@ -166,6 +166,9 @@ img.brand-mark {
 .tx-amt.out { color: var(--red); }
 .tx-empty { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
+.action-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.action-row .btn { margin-top: 0; flex: 1 1 0; min-width: 120px; }
+
 .money-forms { display: grid; grid-template-columns: 1fr; gap: 14px; }
 .money-forms-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 @media (max-width: 860px) { .money-forms-3 { grid-template-columns: 1fr; } }
