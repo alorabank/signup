@@ -10,6 +10,13 @@ var SUPABASE_ANON_KEY = "sb_publishable_c1sl1Mw4Y5EMWjkmYSzEow_m5Yowqk0";
 
 window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// PWA: register the service worker (all pages load this file).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+
 window.Alora = (function () {
   'use strict';
 
