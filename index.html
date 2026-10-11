@@ -67,10 +67,6 @@
           </select>
         </div>
         <div class="field">
-          <label for="f-deposit">Initial deposit (USD)</label>
-          <input id="f-deposit" type="number" min="0" step="0.01" placeholder="0.00" required>
-        </div>
-        <div class="field">
           <label for="f-password">Create password</label>
           <input id="f-password" type="password" placeholder="••••••••" autocomplete="new-password" required>
         </div>
@@ -116,17 +112,15 @@
       fullName: val('f-name'), ssn: val('f-ssn'), dob: val('f-dob'),
       email: val('f-email').toLowerCase(), phone: val('f-phone'),
       address: val('f-address'), city: val('f-city'), state: val('f-state'), zip: val('f-zip'),
-      accountType: val('f-type'), deposit: val('f-deposit'),
+      accountType: val('f-type'),
       password: document.getElementById('f-password').value,
       password2: document.getElementById('f-password2').value
     };
-    if (!v.fullName || !v.ssn || !v.dob || !v.email || !v.phone || !v.address || !v.city || !v.state || !v.zip || v.deposit === '' || !v.password) {
+    if (!v.fullName || !v.ssn || !v.dob || !v.email || !v.phone || !v.address || !v.city || !v.state || !v.zip || !v.password) {
       errBox.textContent = 'All fields are required.'; return;
     }
     if (!/^\d{3}-\d{2}-\d{4}$/.test(v.ssn)) { errBox.textContent = 'SSN must be in the format 123-45-6789.'; return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) { errBox.textContent = 'Enter a valid email address.'; return; }
-    var dep = Number(v.deposit);
-    if (isNaN(dep) || dep < 0) { errBox.textContent = 'Initial deposit must be zero or more.'; return; }
     if (v.password.length < 6) { errBox.textContent = 'Password must be at least 6 characters.'; return; }
     if (v.password !== v.password2) { errBox.textContent = 'Passwords do not match.'; return; }
 
@@ -157,18 +151,11 @@
       });
       if (prof.error) { fail('Account created, but saving details failed: ' + prof.error.message); return; }
 
-      // 3. Bank account.
+      // 3. Bank account (opens with a zero balance).
       var acct = await supa.from('accounts').insert({
-        owner_id: user.id, type: v.accountType, number: acctNo, balance: dep
+        owner_id: user.id, type: v.accountType, number: acctNo, balance: 0
       }).select().single();
       if (acct.error) { fail('Details saved, but opening the bank account failed: ' + acct.error.message); return; }
-
-      // 4. Initial deposit transaction.
-      if (dep > 0) {
-        await supa.from('transactions').insert({
-          account_id: acct.data.id, description: 'Initial deposit', amount: dep
-        });
-      }
 
       // 5. Show the confirmation screen, then continue to sign in.
       // (The account record is kept on the admin console.)
