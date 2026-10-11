@@ -241,11 +241,16 @@
     }
     var ref = Alora.genReference();
     msg.textContent = 'Sending…';
-    var ins = await supa.from('money_requests').insert({
+    var payload = {
       account_id: account.id, owner_id: s.data.session.user.id,
       kind: invAction === 'deposit' ? 'deposit' : 'withdrawal',
       amount: Math.round(amt * 100) / 100, details: details, reference: ref
-    });
+    };
+    var ins = await supa.from('money_requests').insert(payload);
+    if (ins.error && /reference/i.test(ins.error.message || '')) {
+      delete payload.reference; // DB column not added yet — retry without it
+      ins = await supa.from('money_requests').insert(payload);
+    }
     if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
     var invLabel = 'Investment ••' + String(account.number).slice(-4);
     closeInv();
