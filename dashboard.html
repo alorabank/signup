@@ -48,7 +48,7 @@
     </div>
   </div>
 </div>
-<script src="supa.js"></script>
+<script src="supa.js?v=2"></script>
 <script>
 (function () {
   var accounts = [];
@@ -173,10 +173,24 @@
     if (action === 'billpay') {
       html += '<div class="field"><label for="m-payee">Payee</label><input id="m-payee" type="text" placeholder="Electric company"></div>';
     }
+    if (action === 'deposit') {
+      html += '<div class="deposit-info" id="m-deposit-info"></div>';
+    }
     html += '<div class="field"><label for="m-amount">Amount (USD)</label><input id="m-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>';
     f.innerHTML = html;
     acctOptions(document.getElementById('m-account'), 0);
     if (action === 'transfer') acctOptions(document.getElementById('m-to'), accounts.length > 1 ? 1 : 0);
+    if (action === 'deposit') {
+      var updDepInfo = function () {
+        var a = accounts.find(function (x) { return x.id === document.getElementById('m-account').value; });
+        document.getElementById('m-deposit-info').innerHTML = a
+          ? '<span>Account number</span><strong>' + Alora.escapeHtml(a.number) + '</strong>' +
+            '<span>Routing number</span><strong>' + Alora.ROUTING_NUMBER + '</strong>'
+          : '';
+      };
+      document.getElementById('m-account').addEventListener('change', updDepInfo);
+      updDepInfo();
+    }
     var msg = document.getElementById('money-msg');
     msg.textContent = ''; msg.className = 'money-msg';
     document.getElementById('money-backdrop').classList.remove('hidden');

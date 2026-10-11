@@ -71,6 +71,8 @@ window.Alora = (function () {
     genAccountNumber: genAccountNumber,
     downloadTxt: downloadTxt,
     recordText: recordText,
-    escapeHtml: escapeHtml
+    escapeHtml: escapeHtml,
+    // Alora Bank routing number (shown on the deposit popup).
+    ROUTING_NUMBER: '026073008'
   };
 })();
