@@ -168,11 +168,7 @@
   async function loadAll() {
     var s = await supa.auth.getSession();
     if (!s.data.session) { window.location.href = 'login.html'; return; }
-    try {
-      if (sessionStorage.getItem('alora_2fa') !== s.data.session.user.id) {
-        window.location.href = 'login.html'; return;
-      }
-    } catch (e) {}
+
     var uid = s.data.session.user.id;
 
     var p = await supa.from('profiles').select('full_name, is_admin').eq('id', uid).single();
@@ -545,8 +541,6 @@
       li.style.display = li.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
     });
   });
-
-
 
   // Live updates: when the admin (or anyone) changes a balance, refresh.
   supa.channel('balances')
