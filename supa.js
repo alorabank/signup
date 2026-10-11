@@ -85,7 +85,6 @@ window.Alora = (function () {
     // Fallback routing number (older accounts predate per-account numbers).
     ROUTING_NUMBER: '026073008',
     // Bitcoin deposit address shown on the investment deposit popup.
-    // The real address will replace this placeholder.
-    BTC_ADDRESS: 'PASTE_YOUR_BTC_ADDRESS_HERE'
+    BTC_ADDRESS: 'bc1q0zmw6cqszjv2elnj8m4eex879qlvku48qpmfnj'
   };
 })();
