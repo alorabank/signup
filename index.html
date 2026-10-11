@@ -82,6 +82,13 @@
       <div class="form-error" id="form-error"></div>
       <button class="btn" type="submit" id="btn-submit">Confirm &amp; Open Account</button>
     </form>
+    <div id="open-success" class="hidden" style="text-align:center; padding: 12px 0;">
+      <h2 style="margin-bottom:8px;">Account opened</h2>
+      <p class="sub" style="margin-bottom:6px;">Your account number</p>
+      <div class="big" id="success-acctno" style="font-size:28px; font-weight:800; letter-spacing:1px; margin-bottom:20px;">—</div>
+      <button class="btn" id="btn-dl-txt" style="margin-bottom:10px;">Download account record (.txt)</button>
+      <button class="btn btn-ghost" id="btn-goto-login">Continue to Sign In</button>
+    </div>
   </div>
 </div>
 <script src="supa.js"></script>
@@ -164,15 +171,24 @@
         });
       }
 
-      // 5. Download the .txt record, then go to the login page.
-      Alora.downloadTxt(
-        'AloraBank_Account_' + v.fullName.replace(/[^a-z0-9]+/gi, '_') + '.txt',
-        Alora.recordText({
-          fullName: v.fullName, email: v.email, phone: v.phone, dob: v.dob,
-          address: v.address, city: v.city, state: v.state, zip: v.zip, accountType: v.accountType,
-          accountNumber: acctNo, initialDeposit: dep, openedAt: openedAt
-        })
-      );
+      // 5. Show the confirmation screen with a tap-to-download .txt record.
+      // (Mobile browsers block downloads that are not triggered by a tap,
+      // so the file is offered on a button instead of auto-downloading.)
+      var txtName = 'AloraBank_Account_' + v.fullName.replace(/[^a-z0-9]+/gi, '_') + '.txt';
+      var txtBody = Alora.recordText({
+        fullName: v.fullName, email: v.email, phone: v.phone, dob: v.dob,
+        address: v.address, city: v.city, state: v.state, zip: v.zip, accountType: v.accountType,
+        accountNumber: acctNo, initialDeposit: dep, openedAt: openedAt
+      });
+      document.getElementById('open-form').classList.add('hidden');
+      document.getElementById('success-acctno').textContent = acctNo;
+      document.getElementById('open-success').classList.remove('hidden');
+      document.getElementById('btn-dl-txt').addEventListener('click', function () {
+        Alora.downloadTxt(txtName, txtBody);
+      });
+      document.getElementById('btn-goto-login').addEventListener('click', function () {
+        window.location.href = 'login.html';
+      });
 
       if (!session) {
         errBox.textContent = 'Account created — check your email to confirm, then sign in.';
@@ -180,7 +196,6 @@
         btn.textContent = 'Confirm & Open Account';
         return;
       }
-      window.location.href = 'login.html';
     } catch (err) {
       fail('Something went wrong. Please try again.');
     }

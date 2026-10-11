@@ -224,3 +224,22 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .hero .value { font-size: 34px; }
   .container { padding: 18px; }
 }
+
+/* ---------- modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(16, 24, 40, 0.55);
+  display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 28px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.2);
+}
+.modal h3 { margin-bottom: 4px; font-size: 17px; }
+.modal .rec-sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+.rec-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.rec-row:last-child { border-bottom: none; }
+.rec-row .k { color: var(--muted); }
+.rec-row .v { font-weight: 600; text-align: right; word-break: break-word; }
+.modal .actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal .actions .btn { margin-top: 0; }

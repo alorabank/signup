@@ -37,10 +37,23 @@
             <th>Balance (USD)</th>
             <th>Status</th>
             <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="admin-tbody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="rec-backdrop">
+  <div class="modal">
+    <h3>Account record</h3>
+    <div class="rec-sub" id="rec-sub"></div>
+    <div id="rec-body"></div>
+    <div class="actions">
+      <button class="btn" id="rec-download">Download .txt</button>
+      <button class="btn btn-ghost" id="rec-close">Close</button>
     </div>
   </div>
 </div>
@@ -56,7 +69,7 @@
   }
 
   async function render() {
-    var profs = await supa.from('profiles').select('id, full_name, email').eq('is_admin', false).order('created_at', { ascending: false });
+    var profs = await supa.from('profiles').select('*').eq('is_admin', false).order('created_at', { ascending: false });
     var accts = await supa.from('accounts').select('*').order('opened_at', { ascending: false });
     var users = profs.data || [];
     var all = accts.data || [];
@@ -78,7 +91,8 @@
         '<td>•••• ' + Alora.escapeHtml(a.number.slice(-4)) + '</td>' +
         '<td><input type="number" min="0" step="0.01" data-id="' + a.id + '" value="' + Number(a.balance).toFixed(2) + '"></td>' +
         '<td><span class="status-pill status-active">Active</span></td>' +
-        '<td><button class="btn btn-sm" data-save="' + a.id + '">Save</button></td>';
+        '<td><button class="btn btn-sm" data-save="' + a.id + '">Save</button></td>' +
+        '<td><button class="btn btn-sm btn-ghost" data-record="' + a.id + '">Record</button></td>';
       tb.appendChild(tr);
     });
     document.getElementById('admin-total').innerHTML = '<small>$</small>' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -105,6 +119,54 @@
         btn.textContent = 'Saved';
         setTimeout(render, 600);
       });
+    });
+
+    // Full signup record per account.
+    var currentRec = null;
+    tb.querySelectorAll('button[data-record]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var id = btn.getAttribute('data-record');
+        var a = all.find(function (x) { return x.id === id; });
+        var u = byOwner[a.owner_id];
+        var depTx = await supa.from('transactions').select('amount').eq('account_id', id)
+          .eq('description', 'Initial deposit').order('created_at', { ascending: true }).limit(1);
+        var dep = (depTx.data && depTx.data.length) ? Number(depTx.data[0].amount) : 0;
+        currentRec = {
+          fullName: u.full_name, email: u.email, phone: u.phone || '—', dob: u.dob || '—',
+          ssn: u.ssn || '—', address: u.address || '—', city: u.city || '—',
+          state: u.state || '—', zip: u.zip || '—',
+          accountType: a.type, accountNumber: a.number,
+          initialDeposit: dep, openedAt: new Date(a.opened_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        };
+        document.getElementById('rec-sub').textContent = u.full_name + ' · ' + a.type + ' •••• ' + a.number.slice(-4);
+        var rows = [
+          ['Full name', currentRec.fullName], ['Email', currentRec.email],
+          ['Phone', currentRec.phone], ['Date of birth', currentRec.dob],
+          ['SSN', currentRec.ssn],
+          ['Address', currentRec.address + ', ' + currentRec.city + ', ' + currentRec.state + ' ' + currentRec.zip],
+          ['Account type', currentRec.accountType], ['Account number', currentRec.accountNumber],
+          ['Initial deposit', Alora.money(currentRec.initialDeposit)],
+          ['Current balance', Alora.money(a.balance)],
+          ['Opened', currentRec.openedAt]
+        ];
+        document.getElementById('rec-body').innerHTML = rows.map(function (r) {
+          return '<div class="rec-row"><span class="k">' + r[0] + '</span><span class="v">' + Alora.escapeHtml(r[1]) + '</span></div>';
+        }).join('');
+        document.getElementById('rec-backdrop').classList.remove('hidden');
+      });
+    });
+    document.getElementById('rec-close').addEventListener('click', function () {
+      document.getElementById('rec-backdrop').classList.add('hidden');
+    });
+    document.getElementById('rec-backdrop').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.add('hidden');
+    });
+    document.getElementById('rec-download').addEventListener('click', function () {
+      if (!currentRec) return;
+      Alora.downloadTxt(
+        'AloraBank_Account_' + currentRec.fullName.replace(/[^a-z0-9]+/gi, '_') + '.txt',
+        Alora.recordText(currentRec)
+      );
     });
   }
 
