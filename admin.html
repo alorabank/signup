@@ -106,6 +106,21 @@
   </div>
 </div>
 
+<div class="modal-backdrop hidden" id="decide-backdrop">
+  <div class="modal" style="max-width:440px;">
+    <h3>Review request</h3>
+    <div id="decide-summary" style="font-size:14.5px; line-height:1.6; background:#f7f8fa; border-radius:12px; padding:14px 16px; margin:12px 0 16px;"></div>
+    <div class="field">
+      <label for="decide-note">Message to customer <span style="color:var(--muted); font-weight:400;">(optional)</span></label>
+      <textarea id="decide-note" rows="3" placeholder="e.g. Please contact support to verify this withdrawal." style="width:100%; border:1px solid #ddd; border-radius:10px; padding:10px 12px; font-size:14.5px; font-family:inherit; resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:18px;">
+      <button class="btn btn-sm" id="decide-approve">Approve</button>
+      <button class="btn btn-sm btn-ghost" id="decide-reject">Reject</button>
+      <button class="btn btn-sm btn-ghost" id="decide-cancel" style="margin-left:auto;">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="modal-backdrop hidden" id="rec-backdrop">
   <div class="modal">
     <h3>Account record</h3>
@@ -233,6 +248,7 @@
   }
 
   var apprCache = [];
+  var apprNames = {};
 
   async function renderApprovals() {
     var q = await supa.from('money_requests').select('*').eq('status', 'pending').order('created_at', { ascending: true });
@@ -250,6 +266,7 @@
     var names = {}, acctInfo = {};
     (profs.data || []).forEach(function (u) { names[u.id] = u.full_name; });
     (accts.data || []).forEach(function (a) { acctInfo[a.id] = a; });
+    apprNames = names;
     var labels = { deposit: 'Deposit', withdrawal: 'Withdrawal', billpay: 'Bill payment' };
     rows.forEach(function (r) {
       var a = acctInfo[r.account_id] || {};
@@ -267,21 +284,57 @@
     });
 
     tb.querySelectorAll('button[data-approve]').forEach(function (btn) {
-      btn.addEventListener('click', function () { decide(btn.getAttribute('data-approve'), true, btn); });
+      btn.addEventListener('click', function () { openDecide(btn.getAttribute('data-approve'), btn); });
     });
     tb.querySelectorAll('button[data-reject]').forEach(function (btn) {
-      btn.addEventListener('click', function () { decide(btn.getAttribute('data-reject'), false, btn); });
+      btn.addEventListener('click', function () { openDecide(btn.getAttribute('data-reject'), btn); });
     });
   }
 
-  async function decide(id, approve, btn) {
+  var decideId = null, decideBtn = null;
+  var kindLabels = { deposit: 'Deposit', withdrawal: 'Withdrawal', billpay: 'Bill payment' };
+
+  function openDecide(id, btn) {
+    var rq = apprCache.find(function (x) { return x.id === id; });
+    if (!rq) { renderApprovals(); return; }
+    decideId = id; decideBtn = btn;
+    var who = apprNames[rq.owner_id] || '';
+    document.getElementById('decide-summary').innerHTML =
+      '<strong>' + (kindLabels[rq.kind] || rq.kind) + ' — ' + Alora.money(rq.amount) + '</strong><br>' +
+      (who ? Alora.escapeHtml(who) + '<br>' : '') +
+      (rq.details ? Alora.escapeHtml(Alora.formatDest(rq.details)) : '');
+    document.getElementById('decide-note').value = '';
+    document.getElementById('decide-backdrop').classList.remove('hidden');
+  }
+
+  function closeDecide() {
+    document.getElementById('decide-backdrop').classList.add('hidden');
+    decideId = null; decideBtn = null;
+  }
+
+  document.getElementById('decide-cancel').addEventListener('click', closeDecide);
+  document.getElementById('decide-backdrop').addEventListener('click', function (e) {
+    if (e.target === this) closeDecide();
+  });
+  document.getElementById('decide-approve').addEventListener('click', function () {
+    var note = document.getElementById('decide-note').value.trim();
+    closeDecide();
+    decide(decideId, true, decideBtn, note);
+  });
+  document.getElementById('decide-reject').addEventListener('click', function () {
+    var note = document.getElementById('decide-note').value.trim();
+    closeDecide();
+    decide(decideId, false, decideBtn, note);
+  });
+
+  async function decide(id, approve, btn, note) {
     btn.disabled = true;
     btn.textContent = '…';
     try {
       var rq = apprCache.find(function (x) { return x.id === id; });
       if (!rq) { renderApprovals(); return; }
       if (!approve) {
-        await supa.from('money_requests').update({ status: 'rejected' }).eq('id', id).eq('status', 'pending');
+        await supa.from('money_requests').update({ status: 'rejected', admin_note: note || null }).eq('id', id).eq('status', 'pending');
         renderApprovals();
         return;
       }
@@ -328,7 +381,7 @@
         }
       }
       // Claim the request first (only if still pending — prevents double-apply).
-      var claim = await supa.from('money_requests').update({ status: 'approved' }).eq('id', id).eq('status', 'pending').select();
+      var claim = await supa.from('money_requests').update({ status: 'approved', admin_note: note || null }).eq('id', id).eq('status', 'pending').select();
       if (!claim.data || !claim.data.length) { renderApprovals(); return; }
       var nb = Math.round((bal + signed) * 100) / 100;
       await supa.from('accounts').update({ balance: nb }).eq('id', rq.account_id);
