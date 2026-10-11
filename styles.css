@@ -549,3 +549,21 @@ body.chase-bg { background: #071a38; }
 .login-card .btn:hover:not(:disabled) { filter: brightness(1.07); box-shadow: 0 6px 18px rgba(17,85,168,.4); transform: none; }
 .login-card .btn-ghost { background: #fff; color: var(--navy); border: 1px solid var(--border); box-shadow: none; }
 .login-card .agreement-box { background: #fbfcfe; }
+
+/* ---------- admin stat cards ---------- */
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stat-card {
+  position: relative; overflow: hidden;
+  background: linear-gradient(128deg, #081a36 0%, var(--navy-2) 60%, #0c2547 100%);
+  border: 1px solid rgba(193, 154, 75, 0.28);
+  border-radius: 16px; padding: 22px 24px; color: #fff;
+  box-shadow: 0 14px 32px rgba(8, 26, 54, 0.28);
+}
+.stat-card::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(380px 150px at 90% -20%, rgba(193, 154, 75, 0.28), transparent 62%);
+}
+.stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.4px; color: rgba(232, 213, 168, 0.82); margin-bottom: 10px; position: relative; }
+.stat-card .value { font-family: var(--serif); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; position: relative; }
+.stat-card .value small { font-size: 20px; color: var(--gold-soft); }
+.stat-card .plan { font-size: 13px; color: rgba(255, 255, 255, 0.62); margin-top: 8px; position: relative; }
