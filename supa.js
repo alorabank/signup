@@ -53,6 +53,38 @@ window.Alora = (function () {
     bd.classList.remove('hidden');
   }
 
+  // Virtual card helpers — display-only cards, not real payment instruments.
+  function genCardNumber() {
+    var digits = '4';
+    for (var i = 0; i < 14; i++) digits += Math.floor(Math.random() * 10);
+    var sum = 0;
+    for (var i = 0; i < digits.length; i++) {
+      var d = Number(digits[i]);
+      if (i % 2 === 0) { d *= 2; if (d > 9) d -= 9; }
+      sum += d;
+    }
+    return digits + String((10 - (sum % 10)) % 10);
+  }
+
+  function genCardExpiry() {
+    var now = new Date();
+    var mm = String(now.getMonth() + 1).padStart(2, '0');
+    var yy = String((now.getFullYear() + 3) % 100).padStart(2, '0');
+    return mm + '/' + yy;
+  }
+
+  function genCardCvv() {
+    return String(Math.floor(100 + Math.random() * 900));
+  }
+
+  function maskCard(num) {
+    return '\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 ' + num.slice(-4);
+  }
+
+  function groupCard(num) {
+    return num.replace(/(.{4})/g, '$1 ').trim();
+  }
+
   function todayStr() {
     return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
@@ -127,6 +159,11 @@ window.Alora = (function () {
     money: money,
     genReference: genReference,
     showReceipt: showReceipt,
+    genCardNumber: genCardNumber,
+    genCardExpiry: genCardExpiry,
+    genCardCvv: genCardCvv,
+    maskCard: maskCard,
+    groupCard: groupCard,
     todayStr: todayStr,
     genAccountNumber: genAccountNumber,
     genRoutingNumber: genRoutingNumber,
