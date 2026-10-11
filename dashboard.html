@@ -281,7 +281,8 @@
       li.innerHTML = '<div><div>' + labels[q.kind] + ' — ' + Alora.money(q.amount) +
         (q.details ? ' · ' + Alora.escapeHtml(Alora.formatDest(q.details)) : '') + '</div>' +
         '<div class="tx-meta">' + (acct ? Alora.escapeHtml(acct.type) + ' •••• ' + Alora.escapeHtml(acct.number.slice(-4)) + ' · ' : '') +
-        fmtDate(q.created_at) + '</div></div>' +
+        fmtDate(q.created_at) + '</div>' +
+        (q.admin_note ? '<div class="tx-note">Note from Alora Bank: ' + Alora.escapeHtml(q.admin_note) + '</div>' : '') + '</div>' +
         '<span class="status-pill ' + pill + '">' + q.status + '</span>';
       list.appendChild(li);
     });
@@ -466,7 +467,7 @@
       delete payload.reference; // DB column not added yet — retry without it
       ins = await supa.from('money_requests').insert(payload);
     }
-    if (ins.error) { msg.textContent = 'Request failed. Please try again.'; msg.classList.add('err'); return; }
+    if (ins.error) { msg.textContent = 'Request failed: ' + (ins.error.message || 'unknown error'); msg.classList.add('err'); return; }
     closeMoney();
     loadRequests();
     Alora.showReceipt({
