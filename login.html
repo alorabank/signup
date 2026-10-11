@@ -151,6 +151,47 @@
     document.getElementById('legal-backdrop').classList.remove('hidden');
   });
 
+  function parseDevice(ua) {
+    ua = ua || '';
+    var os = /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android'
+      : /Windows/.test(ua) ? 'Windows' : /Macintosh/.test(ua) ? 'macOS'
+      : /Linux/.test(ua) ? 'Linux' : 'Unknown OS';
+    var dev = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad'
+      : /Android/.test(ua) ? 'Android device' : (/Mobile/.test(ua) ? 'Mobile' : os);
+    var br = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome'
+      : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : 'Browser';
+    return br + ' on ' + dev;
+  }
+
+  // Records this sign-in attempt for the admin's login-activity panel.
+  // Never blocks login: failures here are silent (e.g. table not created yet).
+  async function logLoginActivity(user, email, fullName, success) {
+    try {
+      var ip = null, loc = null;
+      try {
+        var ctl = new AbortController();
+        var t = setTimeout(function () { ctl.abort(); }, 2500);
+        var r = await fetch('https://ipapi.co/json/', { signal: ctl.signal });
+        clearTimeout(t);
+        if (r.ok) {
+          var j = await r.json();
+          ip = j.ip || null;
+          loc = [j.city, j.country_name].filter(Boolean).join(', ') || null;
+        }
+      } catch (e) {}
+      await supa.from('login_activity').insert({
+        user_id: success && user ? user.id : null,
+        email: email,
+        full_name: fullName,
+        ip_address: ip,
+        location: loc,
+        device: parseDevice(navigator.userAgent),
+        user_agent: (navigator.userAgent || '').slice(0, 300),
+        success: success
+      });
+    } catch (e) {}
+  }
+
   var form = document.getElementById('login-form');
   var errBox = document.getElementById('login-error');
   var btn = document.getElementById('btn-login');
@@ -175,7 +216,12 @@
     btn.textContent = 'Signing in…';
     try {
       var res = await supa.auth.signInWithPassword({ email: email, password: password });
-      if (res.error) { errBox.textContent = res.error.message; btn.disabled = false; btn.textContent = 'Sign In'; return; }
+      if (res.error) {
+        errBox.textContent = res.error.message;
+        btn.disabled = false; btn.textContent = 'Sign In';
+        logLoginActivity(null, email, null, false);
+        return;
+      }
       var prof = await supa.from('profiles').select('is_admin, full_name').eq('id', res.data.user.id).single();
       if (prof.error || !prof.data) {
         await supa.auth.signOut();
@@ -191,6 +237,7 @@
         if (remBox.checked) localStorage.setItem('alora_remember', email);
         else localStorage.removeItem('alora_remember');
       } catch (e) {}
+      await logLoginActivity(res.data.user, email, prof.data.full_name, true);
       window.location.href = (role === 'admin') ? 'admin.html' : 'dashboard.html';
     } catch (err) {
       errBox.textContent = 'Sign in failed. Please try again.';
