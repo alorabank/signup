@@ -89,6 +89,16 @@
   function val(id) { return document.getElementById(id).value.trim(); }
   function fail(msg) { errBox.textContent = msg; btn.disabled = false; btn.textContent = 'Confirm & Open Account'; }
 
+  // Auto-format SSN as XXX-XX-XXXX while typing.
+  var ssnInput = document.getElementById('f-ssn');
+  ssnInput.addEventListener('input', function () {
+    var d = ssnInput.value.replace(/\D/g, '').slice(0, 9);
+    var out = d.slice(0, 3);
+    if (d.length > 3) out += '-' + d.slice(3, 5);
+    if (d.length > 5) out += '-' + d.slice(5, 9);
+    ssnInput.value = out;
+  });
+
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     errBox.textContent = '';
