@@ -19,18 +19,13 @@
   </div>
 </div>
 <div class="container">
-  <div class="hero">
-    <div class="label">Total Balance</div>
-    <div class="value" id="hero-balance"><small>$</small>0.00</div>
-    <div class="plan" id="hero-sub">—</div>
-  </div>
+  <div class="cards" id="account-cards" style="margin-bottom:16px;"></div>
   <div class="action-row" style="margin: 4px 0 20px;">
     <button class="btn" data-action="deposit">Deposit</button>
     <button class="btn" data-action="withdraw">Withdraw</button>
     <button class="btn" data-action="transfer">Transfer</button>
     <button class="btn" data-action="billpay">Bill Pay</button>
   </div>
-  <div class="cards" id="account-cards"></div>
   <div class="panel" style="margin-bottom:20px;">
     <h3>Recent transactions</h3>
     <ul class="tx-list" id="tx-list"></ul>
@@ -86,12 +81,6 @@
   }
 
   function render(txns) {
-    var total = accounts.reduce(function (s, a) { return s + Number(a.balance); }, 0);
-    document.getElementById('hero-balance').innerHTML = '<small>$</small>' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('hero-sub').innerHTML = accounts.length
-      ? 'Member since <b>' + fmtDate(accounts[0].opened_at) + '</b>'
-      : '—';
-
     var cards = document.getElementById('account-cards');
     cards.innerHTML = '';
     accounts.forEach(function (a) {
